@@ -41,7 +41,9 @@ final class SettingsStore {
         return .none
     }
 
-    var isPaired: Bool { !deviceToken.isEmpty }
+    /// Paired = device token AND a host to use it against (a Keychain token can
+    /// outlive an uninstall in the simulator; without a host it's inert).
+    var isPaired: Bool { !deviceToken.isEmpty && isConfigured }
 
     /// True once a host is set. Empty host => demo mode (canned replies).
     var isConfigured: Bool { !host.trimmingCharacters(in: .whitespaces).isEmpty }

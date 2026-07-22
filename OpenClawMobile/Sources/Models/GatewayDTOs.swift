@@ -33,7 +33,11 @@ enum GatewayError: LocalizedError {
     case badStatus(Int)
     /// Signed bootstrap connect accepted but the device awaits operator approval
     /// (`PAIRING_REQUIRED / wait_then_retry`, .docs/protocol.md §3) — retryable.
-    case pairingPending
+    /// Carries the gateway's requestId so the UI can show the exact approve command.
+    case pairingPending(requestId: String?)
+    /// `AUTH_BOOTSTRAP_TOKEN_INVALID` — setup code expired/consumed; user needs
+    /// a fresh one (`openclaw qr`). Terminal, not retryable.
+    case bootstrapExpired
 
     var errorDescription: String? {
         switch self {
@@ -41,6 +45,7 @@ enum GatewayError: LocalizedError {
         case .unreachable(let m): return "Can't reach Gateway: \(m)"
         case .badStatus(let c):   return "Gateway returned HTTP \(c)."
         case .pairingPending: return "Device pairing pending — approve this device on the gateway."
+        case .bootstrapExpired: return "Setup code expired. Generate a fresh one with `openclaw qr`."
         }
     }
 }

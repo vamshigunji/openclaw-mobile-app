@@ -22,9 +22,11 @@
 	<string>1</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<key>NSAllowsArbitraryLoads</key>
+		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Scan the QR setup code from your gateway to pair this device.</string>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>

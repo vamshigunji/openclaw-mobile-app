@@ -15,6 +15,7 @@ struct ChatView: View {
             header
             Divider().overlay(Theme.borderColor)
             messageList
+            if !settings.isConfigured { demoBanner } // design review 2A
             ChatInputBar(text: $vm.draft, canSend: vm.canSend, onSend: vm.send)
         }
         .background(Theme.bgPrimary.ignoresSafeArea())
@@ -23,6 +24,9 @@ struct ChatView: View {
         }
         .onAppear {
             vm.start()
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--open-settings") { showSettings = true }
+            #endif
             if ProcessInfo.processInfo.arguments.contains("--seed-demo") {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { vm.seedDemo() }
             }
@@ -51,6 +55,29 @@ struct ChatView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .background(Theme.bgPrimary)
+    }
+
+    /// First-run bridge from demo mode to pairing (design review 2026-07-21, 2A).
+    /// Disappears once a host is configured; the demo path itself is unchanged.
+    private var demoBanner: some View {
+        Button { showSettings = true } label: {
+            HStack(spacing: 8) {
+                Circle().fill(AgentStatus.waiting.color).frame(width: 7, height: 7)
+                Text("Demo mode — pair your gateway to talk to your real agent →")
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundStyle(AgentStatus.waiting.color)
+                    .multilineTextAlignment(.leading)
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Theme.bgSecondary)
+            .overlay(RoundedRectangle(cornerRadius: Theme.radius)
+                .stroke(AgentStatus.waiting.color.opacity(0.4), lineWidth: Theme.border))
+            .padding(.horizontal, 14)
+            .padding(.bottom, 6)
+        }
+        .accessibilityLabel("Demo mode. Pair your gateway to talk to your real agent.")
     }
 
     private var messageList: some View {

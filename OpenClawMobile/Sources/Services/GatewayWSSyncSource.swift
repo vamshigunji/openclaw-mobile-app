@@ -141,9 +141,10 @@ struct GatewayWSSyncSource: SyncSource {
                 try await write(GatewayFrames.connect(auth: auth, device: device), to: ws)
             } else if env.id == "p0-connect" {
                 if env.ok == false || env.error != nil {
-                    if env.errorCode?.contains("PAIRING_REQUIRED") == true {
-                        throw GatewayError.pairingPending
+                    if env.isPairingRequired {
+                        throw GatewayError.pairingPending(requestId: env.pairingRequestId)
                     }
+                    if env.isBootstrapInvalid { throw GatewayError.bootstrapExpired }
                     throw GatewayError.unauthorized
                 }
                 if let minted = env.payload?.auth?.deviceToken, !minted.isEmpty {
@@ -192,6 +193,14 @@ struct InboundEnvelope: Decodable {
     struct ErrorBody: Decodable {
         var code: String?
         var message: String?
+        var details: Details?
+
+        struct Details: Decodable {
+            var code: String?
+            var reason: String?
+            var requestId: String?
+            var authReason: String?
+        }
     }
 
     struct Payload: Decodable {
@@ -216,6 +225,18 @@ struct InboundEnvelope: Decodable {
     var challengeNonce: String? { payload?.nonce ?? params?.nonce ?? nonce }
 
     var errorCode: String? { error?.code ?? payload?.error?.code ?? error?.message }
+
+    /// LIVE 2026-07-21: PAIRING_REQUIRED arrives as error.details.code with the
+    /// pending requestId alongside — surfaced so the UI can show the exact
+    /// `openclaw devices approve <id>` command.
+    var isPairingRequired: Bool {
+        error?.details?.code == "PAIRING_REQUIRED" || errorCode == "NOT_PAIRED"
+    }
+    var pairingRequestId: String? { error?.details?.requestId }
+    var isBootstrapInvalid: Bool {
+        error?.details?.code == "AUTH_BOOTSTRAP_TOKEN_INVALID"
+            || error?.details?.authReason?.hasPrefix("bootstrap_token") == true
+    }
 
     struct WireMessage: Decodable {
         var role: String?

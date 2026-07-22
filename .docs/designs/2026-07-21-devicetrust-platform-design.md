@@ -72,13 +72,13 @@ already implemented in Settings. What the client CANNOT fix alone: setup-code li
 
 First-time-right pairing requires gateway cooperation on two points the client cannot
 fix: (1) setup-code lifetime — minutes-lived codes expire before a normal person
-finishes; (2) the manual operator-approval step. Strategy (folds Approach C into the
-A→B sequence): submit focused upstream PRs — configurable code TTL and an
-auto-approve-on-QR-pair option — while shipping a client-side mitigation now (clear
-"waiting for approval" UX with the exact approve command shown to the operator). No
-fork. If upstream slow-walks, a companion CLI on the gateway box (`devicetrust pair`)
-is the fallback; it composes with any gateway version. Budget: one PR cycle per month,
-timeboxed.
+finishes; (2) the manual operator-approval step. Strategy (REVISED, eng review
+2026-07-21 D6): NO upstream PRs — the wedge is client-side and contributing TTL/
+auto-approve fixes would repair the official app's pairing too. Mitigations are ours
+alone: QR scan compresses entry to seconds (defeats the TTL in practice), the
+approval-wait UX shows the operator the exact approve command, and the companion CLI
+on the gateway box (`devicetrust pair`) is the escape hatch if gateway friction
+proves fatal. Approach C is dead, not folded.
 
 ## Premises
 
@@ -113,12 +113,18 @@ phase 2; upstream may slow-walk.
 
 ## Recommended Approach
 
-**A→B sequence (approved by founder).** Ship the reliable client now — it is the demo
-of the platform. B's first milestone is named-tunnel management only (kills the
-ephemeral-URL pain). Fleet/pairing dashboard and push relay are explicitly BEHIND the
-demand gate — named here for direction, not commitment. Note: push notifications
-violate the repo's v1 scope rule by design; that rule is overridden only at B kickoff,
-not before. Naming decision locked this session: the auth subsystem is **DeviceTrust**
+**A→B sequence (approved by founder; resequenced by eng review 2026-07-21 D5).**
+Ship the CURRENT build to TestFlight first — tester #1 gets the already-working
+pairing+chat before any refactor lands (outside-voice finding 8, founder-accepted).
+The GatewayConnection actor and PairingService extraction land AFTER tester-1
+feedback; the QR scanner lands BEFORE TestFlight (it IS the wedge deliverable).
+B's first milestone (REVISED, D7): `devicetrust setup` — a LOCAL CLI on the gateway
+box that configures a named tunnel on the customer's own Cloudflare account. No
+hosted control plane, no API-token custody (holding the token would reinstate the
+vendor in the trust boundary). Monetization is discovered from real usage, not
+assumed. Fleet/pairing dashboard and push relay stay BEHIND the demand gate. Note:
+push notifications violate the repo's v1 scope rule by design; that rule is
+overridden only at B kickoff, not before. Naming decision locked this session: the auth subsystem is **DeviceTrust**
 (descriptive, whole-subsystem). Component mapping in the repo: `DeviceIdentity` +
 `DeviceAuth` (DeviceAuth.swift — keys, deviceId, v3 signing), pairing flow
 (SettingsView.pair + GatewayWSSyncSource.connectOnce), token lifecycle
@@ -144,8 +150,9 @@ not before. Naming decision locked this session: the auth subsystem is **DeviceT
   days across cloudflared and gateway restarts.
 - B milestone 1b (credential durability): device tokens survive gateway restarts with
   zero re-pairing (device keys already do — verified by design).
-- Demand gate before any B feature beyond the tunnel: at least one person agrees to pay
-  a stated price (hypothesis: $5/mo per gateway) for managed connectivity.
+- Demand gate before any B feature beyond the tunnel CLI: at least one person states
+  what they would pay for (REVISED D7 — the $5/mo hosted hypothesis is retired; free
+  local CLI first, willingness-to-pay discovered from usage).
 
 ## Distribution Plan
 
@@ -160,14 +167,16 @@ not before. Naming decision locked this session: the auth subsystem is **DeviceT
 - DONE 2026-07-21: phase-0 live handshake — hello-ok with operator scopes, deviceToken
   minted, in-app chat round-trip verified live. Everything below assumes it.
 - Apple Developer account/team for device builds (blocker for any external user).
-- P1/P7 two-device probes (peer broadcast fan-out + remote scope parity) — validates
-  multi-device before inviting testers; needs a second paired device.
+- P1/P7 two-device probes (peer broadcast fan-out + remote scope parity) — run when a
+  second device exists; NOT a gate for tester #1 (cut from critical path, D8).
 - Named tunnel (Cloudflare, customer-account model) on the founder's gateway — first
   brick of B, also unblocks stable demo links.
 
 ## The Assignment
 
-Week 1: buy the Apple Developer membership (unblocks TestFlight), and find + DM three
+Week 1: buy the Apple Developer membership (unblocks TestFlight), write the one-page
+stable-tunnel setup guide that ships with every TestFlight invite (so retention
+measures the app, not Quick-Tunnel churn), and find + DM three
 OpenClaw self-hosters who complained about mobile pairing (App Store/Play reviews,
 OpenClaw Discord, r/selfhosted). Watch ONE of them attempt pairing with the OFFICIAL
 app — say nothing while they struggle. Week 2, once TestFlight is live: same person,
@@ -185,3 +194,128 @@ your app, same silence. Their surprises are the roadmap. (This also converts
 - You shipped the live round-trip the same day you learned the signature format —
   "text my openclaw for real ... I need it fully working" — and it worked. Agency is
   not your bottleneck; named users are.
+
+
+## Engineering Review Addendum (2026-07-21)
+
+### What already exists (reuse, don't rebuild)
+- DeviceTrust crypto, pairing flow, chat send/subscribe/history — live-verified today; REUSED
+- AVFoundation QR scanning [Layer 1 built-in] — no dependency added
+- `phase0-roundtrip.mjs` + simulator seeding — the manual E2E harness; REUSED as pre-release check
+
+### NOT in scope (considered, deferred, why)
+- GatewayConnection actor + PairingService extraction — post-tester-1 (D5: ship-as-is first)
+- Upstream gateway PRs — dropped entirely (D6: don't donate the wedge)
+- Hosted control plane / token custody — replaced by local CLI (D7: trust boundary)
+- Apple enrollment-today + nightly drift probe — declined in D8 (probe captured in TODOS.md)
+- Android, fleet dashboard, push relay — behind demand gate (unchanged)
+- P1/P7 two-device probes — when second device exists (D8)
+
+### Connection actor (post-tester-1) — target shape
+```
+                 ┌────────────────────────────────────────┐
+                 │        GatewayConnection (actor)        │
+ send ──────────▶│ one socket · one signed handshake       │
+ loadHistory ───▶│ unique req ids → continuation map       │──▶ events stream
+ subscribe ─────▶│ backoff 1s→2s→…→30s · resubscribe       │    (AsyncStream)
+                 │ deviceToken refresh on every hello-ok   │
+                 └────────────────────────────────────────┘
+ GatewayWSSyncSource becomes a thin adapter; SyncSource seam unchanged.
+```
+
+### Failure modes (new codepaths)
+| Path | Realistic failure | Test | Handling | User sees |
+|---|---|---|---|---|
+| QR scan | camera permission denied | planned | paste fallback | clear prompt |
+| SetupCode.parse | truncated/garbage blob | planned | typed error | "invalid code" + re-mint hint |
+| Pairing wait | approval never comes | planned | 2-min timeout | timeout + retry |
+| Send (pre-actor) | tunnel drop mid-send | GAP until actor | bubble marked failed | retry affordance |
+| Subscribe (pre-actor) | silent socket death | **critical gap until actor** | none pre-actor | stale chat |
+CRITICAL GAP (accepted, D5): pre-actor builds can silently stop receiving; mitigated by
+tester expectations + one-pager; actor closes it post-tester-1.
+
+### Worktree parallelization
+| Step | Modules | Depends on |
+|---|---|---|
+| QR scanner + SetupCode parser | Features/Settings, Services | — |
+| ATS fix (2B) | project.yml | — |
+| CI + TestFlight | .github/, project.yml | Apple team |
+| Mock-gateway E2E | Tests/, tools/ | — |
+| Connection actor + PairingService | Services | tester-1 feedback |
+Lanes: A) QR+parser  B) ATS+CI  C) mock E2E — all parallel. D) actor waits.
+
+## Implementation Tasks
+Synthesized from review findings. P1 blocks TestFlight; P2 same branch; P3 follow-up.
+
+- [ ] **T1 (P1, human: ~1d / CC: ~20min)** — Settings — QR scan pairing: scanner view (AVFoundation), camera-permission fallback to paste, `SetupCode.parse` (blob | inner token | garbage) TDD'd
+  - Surfaced by: Step 0 + outside-voice #1 (wedge deliverable was implicit)
+  - Files: Features/Settings/, Services/, Tests/
+  - Verify: unit tests + manual scan of `openclaw qr` output
+- [ ] **T2 (P1, human: ~15min / CC: ~2min)** — project.yml — replace `NSAllowsArbitraryLoads` with `NSAllowsLocalNetworking` (Issue 2B)
+  - Verify: build + wss tunnel connect + LAN http connect
+- [ ] **T3 (P1, human: ~1d / CC: ~30min)** — CI/TestFlight — GitHub Actions build+test on PR; TestFlight lane once Apple team exists; reviewer notes incl. demo mode (4.2 risk)
+  - Surfaced by: Distribution check + outside-voice #6
+  - Verify: green CI run; TestFlight processing
+- [ ] **T4 (P2, human: ~1.5d / CC: ~30min)** — Tests — mock protocol-v4 gateway (local WS server replaying golden frames); E2E: pair → send → streamed reply (Issue 4B)
+  - Verify: `xcodebuild test` green incl. E2E suite
+- [ ] **T5 (P2, human: ~2h / CC: ~10min)** — docs — stable-tunnel one-pager shipped with TestFlight invite (outside-voice #4)
+  - Verify: a non-engineer follows it to a named tunnel
+- [ ] **T6 (P3, post-tester-1, human: ~2d / CC: ~40min)** — Services — GatewayConnection actor (Issue 1A) + PairingService extraction (Issue 3A), TDD via injected transport; closes the silent-subscribe critical gap
+  - Verify: all planned actor/backoff/resubscribe unit tests green
+
+## Design Review Addendum (2026-07-21)
+
+Approved visual spec: `.docs/designs/assets/2026-07-21-pairing-states.png`
+(6 frames: demo-banner bridge, entry, scanning, waiting-for-approval, paired,
+failed-expired; exact Theme.swift tokens). T1 implements these screens.
+
+### Decisions (all resolved)
+1. **Settings hierarchy is pairing-state-dependent (1A).** Unpaired: pairing hero
+   (Scan Setup Code) on top, host/token/model collapsed under an "Advanced"
+   disclosure (the QR carries the host — manual fields are the fallback, not the
+   front door). Paired: compact status row first, fields below.
+2. **First-run bridge = demo-mode banner (2A).** Persistent amber banner above the
+   chat input in demo mode: "Demo mode — pair your gateway to talk to your real
+   agent →"; tap opens pairing; disappears when paired. Demo path itself unchanged
+   (protected by CLAUDE.md).
+3. **A11y spec (3A), folded into T1:** state transitions announced via
+   AccessibilityNotification; step-ladder rows carry VoiceOver labels; 44pt min
+   touch targets; mono text respects Dynamic Type; paste path documented as the
+   non-camera route.
+
+### Interaction states (what the user SEES)
+| State | Badge | Ladder | Primary content | Primary action |
+|---|---|---|---|---|
+| Demo chat | amber banner | — | "Demo mode — pair your gateway…" | tap → pairing |
+| Entry | — | — | why-pairing card + `openclaw qr` hint | Scan Setup Code (paste + Advanced below) |
+| Scanning | — | — | camera frame + auto-fill explainer | (scan); "Enter code manually" escape |
+| Connecting | green spinner | step 1 active | — | Cancel |
+| Waiting approval | amber WAITING ON GATEWAY | 1✓ 2● 3○ | approve command in copyable code block + retry countdown | Cancel |
+| Paired | green PAIRED | 1✓ 2✓ 3✓ | key-in-Keychain + revocation reassurance | **Start Chatting →** |
+| Failed: expired | red CODE EXPIRED | fail dot | cause + `openclaw qr` fix + "under 10 seconds" | Scan New Code |
+| Failed: camera denied | — | — | permission explainer | Paste code instead (+ Settings deep link) |
+| Failed: timeout | red | 2 fail | "approval didn't arrive" + approve command | Retry |
+
+Copy rules: utility language, mono; every failure names its cause AND its fix;
+recovery is always the primary button — never a dead-end error.
+
+### Approved Mockups
+| Screen/Section | Mockup Path | Direction | Notes |
+|---|---|---|---|
+| Pairing flow (6 states) | .docs/designs/assets/2026-07-21-pairing-states.png (+ .html source) | Terminal-dark, step-ladder progress, StatusBadge-derived states | Tokens exact from Theme.swift; also at ~/.gstack/projects/vamshigunji-openclaw-mobile-app/designs/pairing-flow-20260721/ |
+
+## GSTACK REVIEW REPORT
+
+| Review | Trigger | Why | Runs | Status | Findings |
+|--------|---------|-----|------|--------|----------|
+| CEO Review | `/plan-ceo-review` | Scope & strategy | 0 | — | — |
+| Codex Review | `/codex review` | Independent 2nd opinion | 0 | — | (codex empty-response; Claude subagent ran as eng outside voice) |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAR (PLAN) | 4 issues, 1 critical gap (accepted w/ mitigation) |
+| Design Review | `/plan-design-review` | UI/UX gaps | 1 | CLEAR (FULL) | score: 4/10 → 9/10, 4 decisions (mockup + 1A/2A/3A) |
+| DX Review | `/plan-devex-review` | Developer experience gaps | 0 | — | — |
+
+- **CROSS-MODEL:** eng outside voice (Claude subagent): 8 findings — 3 tensions resolved by founder (D5 ship-first, D6 drop upstream PRs, D7 local CLI), 3 folded, 2 declined.
+- **VERDICT:** ENG + DESIGN CLEARED — ready to implement (T1–T5 pre-TestFlight, T6 post-tester-1).
+
+**UNRESOLVED DECISIONS:**
+- Apple enrollment timing — declined "enroll today" (eng D8); week-1 assignment still requires it, so any enrollment delay slides the tester schedule.

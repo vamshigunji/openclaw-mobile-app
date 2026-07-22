@@ -12,8 +12,11 @@
 		0F906CD5D3C2355A7FC0EAD2 /* DeviceAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFB19A15AA197489AF27A5F7 /* DeviceAuth.swift */; };
 		15553A8DD5134A7526243A91 /* SSEDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F11E6FB712B60925129C90B /* SSEDecoder.swift */; };
 		33BD379AF95726F18CEF3F4D /* ChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ED68AA2879E7319E947F4A7 /* ChatViewModel.swift */; };
+		519222A28B7279C6844CA917 /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89FAC2B716660E999A46AE1C /* QRScannerView.swift */; };
 		54D73E4F29A0E5818C7125FB /* MessageBubble.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F3170560777A2D3C4D7E8BA /* MessageBubble.swift */; };
+		579F91D931F88185F2539D37 /* PairingFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE2F872B8BAAACDF4F585EBD /* PairingFlow.swift */; };
 		581AAD39E89754598F573F04 /* ChatInputBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F689BAD38EB1533EE305E089 /* ChatInputBar.swift */; };
+		5A0055EB6F828A10CCFEFE7A /* PairingFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3944C890D9BC63414594120 /* PairingFlowTests.swift */; };
 		5BDD7F1E1862DB454EEA163E /* GatewayDTOs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A3D5A53640320021B36BAA0 /* GatewayDTOs.swift */; };
 		822F008346A5750AB0466C23 /* GatewayFrames.swift in Sources */ = {isa = PBXBuildFile; fileRef = 375E69AC2F853CE81C8C0495 /* GatewayFrames.swift */; };
 		84E6A0F9843126D9BBEB0241 /* WireProtocolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F74DC0253794361B0C1B0 /* WireProtocolTests.swift */; };
@@ -48,11 +51,13 @@
 		4F11E6FB712B60925129C90B /* SSEDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSEDecoder.swift; sourceTree = "<group>"; };
 		7F3170560777A2D3C4D7E8BA /* MessageBubble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubble.swift; sourceTree = "<group>"; };
 		82CF3E9C8F4E511F59CAF523 /* GatewayClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GatewayClient.swift; sourceTree = "<group>"; };
+		89FAC2B716660E999A46AE1C /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
 		921D4721CF554602FC353179 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		921D6E1143943A940AB488C0 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		9DF098D9A46B7822E77C5DAF /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
 		9ED68AA2879E7319E947F4A7 /* ChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModel.swift; sourceTree = "<group>"; };
 		BF906440FA91E8C53FAAE01A /* GatewayWSSyncSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GatewayWSSyncSource.swift; sourceTree = "<group>"; };
+		C3944C890D9BC63414594120 /* PairingFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingFlowTests.swift; sourceTree = "<group>"; };
 		C51FDF53437BFDD01D4D178E /* DeviceAuthTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceAuthTests.swift; sourceTree = "<group>"; };
 		C5FD674695120456C1E892BC /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		CD2DD81DA73103F390CCAE4D /* OpenClawMobileApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenClawMobileApp.swift; sourceTree = "<group>"; };
@@ -62,6 +67,7 @@
 		EDFCAD324B8F99D70F30B3D0 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
 		EF712C57ECDC56EFFDE12A9B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		F689BAD38EB1533EE305E089 /* ChatInputBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatInputBar.swift; sourceTree = "<group>"; };
+		FE2F872B8BAAACDF4F585EBD /* PairingFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingFlow.swift; sourceTree = "<group>"; };
 		FE7F74DC0253794361B0C1B0 /* WireProtocolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WireProtocolTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -121,6 +127,7 @@
 			children = (
 				2EA8E2AB3274760009434B5A /* ConnectFrameTests.swift */,
 				C51FDF53437BFDD01D4D178E /* DeviceAuthTests.swift */,
+				C3944C890D9BC63414594120 /* PairingFlowTests.swift */,
 				FE7F74DC0253794361B0C1B0 /* WireProtocolTests.swift */,
 			);
 			path = Tests;
@@ -146,6 +153,7 @@
 		C90A012DAC777A533A1865BB /* Settings */ = {
 			isa = PBXGroup;
 			children = (
+				89FAC2B716660E999A46AE1C /* QRScannerView.swift */,
 				C5FD674695120456C1E892BC /* SettingsView.swift */,
 			);
 			path = Settings;
@@ -168,6 +176,7 @@
 				375E69AC2F853CE81C8C0495 /* GatewayFrames.swift */,
 				BF906440FA91E8C53FAAE01A /* GatewayWSSyncSource.swift */,
 				EDFCAD324B8F99D70F30B3D0 /* KeychainService.swift */,
+				FE2F872B8BAAACDF4F585EBD /* PairingFlow.swift */,
 				9DF098D9A46B7822E77C5DAF /* SettingsStore.swift */,
 				4F11E6FB712B60925129C90B /* SSEDecoder.swift */,
 				E7397BB53589B3AD5C1B1B85 /* SyncSource.swift */,
@@ -257,6 +266,7 @@
 			files = (
 				A7A0E82B0B99D77C4D90AD00 /* ConnectFrameTests.swift in Sources */,
 				E12812DB19259A35FA57833C /* DeviceAuthTests.swift in Sources */,
+				5A0055EB6F828A10CCFEFE7A /* PairingFlowTests.swift in Sources */,
 				84E6A0F9843126D9BBEB0241 /* WireProtocolTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -277,6 +287,8 @@
 				965DCB7162F727317F0BF400 /* KeychainService.swift in Sources */,
 				54D73E4F29A0E5818C7125FB /* MessageBubble.swift in Sources */,
 				C53AE0C9C9B4C5BEFDF4AA2E /* OpenClawMobileApp.swift in Sources */,
+				579F91D931F88185F2539D37 /* PairingFlow.swift in Sources */,
+				519222A28B7279C6844CA917 /* QRScannerView.swift in Sources */,
 				15553A8DD5134A7526243A91 /* SSEDecoder.swift in Sources */,
 				088D0D7633CA7C4482179501 /* SettingsStore.swift in Sources */,
 				FFF99AC7A643ED100689AF79 /* SettingsView.swift in Sources */,

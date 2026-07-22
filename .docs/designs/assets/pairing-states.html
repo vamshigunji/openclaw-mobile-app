@@ -1,0 +1,125 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  /* OpenClaw Theme tokens — exact values from Theme.swift */
+  :root{
+    --bg:#0E0F12; --surface:#1E2026; --accent:#22C55E; --text:#E5E7EB;
+    --text2:#9CA3AF; --border:#2A2D34; --amber:#F59E0B; --red:#EF4444;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:"SF Mono",ui-monospace,Menlo,monospace}
+  body{background:#000;display:flex;gap:24px;padding:24px;align-items:flex-start}
+  .phone{width:340px;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:18px 16px;flex-shrink:0}
+  .statelabel{color:#666;font-size:11px;text-align:center;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px}
+  h1{color:var(--text);font-size:15px;font-weight:600;margin-bottom:14px}
+  .steps{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+  .step{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2)}
+  .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .done .dot{background:var(--accent)} .done{color:var(--accent)}
+  .active .dot{background:var(--amber)} .active{color:var(--amber)}
+  .pend .dot{background:transparent;border:1px solid var(--border)}
+  .fail .dot{background:var(--red)} .fail{color:var(--red)}
+  .btn{width:100%;padding:12px;background:var(--accent);color:var(--bg);border:none;border-radius:4px;font-size:14px;font-weight:600;margin-bottom:10px}
+  .btn2{width:100%;padding:12px;background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:4px;font-size:14px;font-weight:600;margin-bottom:10px}
+  .btn-dis{opacity:.4}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:12px;margin-bottom:10px}
+  .card .t{color:var(--text);font-size:12px;line-height:1.5;margin-bottom:8px}
+  .card .s{color:var(--text2);font-size:11px;line-height:1.5}
+  code{display:block;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:8px;color:var(--accent);font-size:11px;margin-top:8px;word-break:break-all}
+  .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 7px;border-radius:4px;font-size:10px;margin-bottom:10px}
+  .badge .dot{width:7px;height:7px}
+  .b-amber{color:var(--amber);border:1px solid rgba(245,158,11,.4)} .b-amber .dot{background:var(--amber)}
+  .b-green{color:var(--accent);border:1px solid rgba(34,197,94,.4)} .b-green .dot{background:var(--accent)}
+  .b-red{color:var(--red);border:1px solid rgba(239,68,68,.4)} .b-red .dot{background:var(--red)}
+  .field label{display:block;color:var(--text2);font-size:10px;letter-spacing:.5px;margin-bottom:5px}
+  .field input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:10px;color:var(--text);font-size:12px;margin-bottom:10px}
+  .link{color:var(--text2);font-size:12px;text-align:center;text-decoration:underline;margin-top:6px}
+  .divider{color:var(--text2);font-size:10px;text-align:center;margin:8px 0}
+  .qrbox{border:1px dashed var(--border);border-radius:4px;padding:22px;text-align:center;color:var(--text2);font-size:34px;margin-bottom:10px}
+</style></head><body>
+
+<!-- STATE 0: DEMO BANNER (in chat) -->
+<div class="phone">
+  <div class="statelabel">0 · Demo chat — entry bridge</div>
+  <h1>agent-01 <span style="color:var(--text2);font-size:11px">demo</span></h1>
+  <div class="card" style="border-color:rgba(245,158,11,.4)">
+    <div class="t" style="color:var(--amber)">● Demo mode</div>
+    <div class="s">You're chatting with a canned demo agent. Pair your gateway to talk to your real one →</div>
+  </div>
+  <div class="card"><div class="s">Connected. Text your agent anything…</div></div>
+  <div class="field" style="margin-top:120px"><input placeholder="Message agent…"></div>
+</div>
+
+<!-- STATE 1: ENTRY -->
+<div class="phone">
+  <div class="statelabel">1 · Entry</div>
+  <h1>Pair this device</h1>
+  <div class="card"><div class="s">Pairing lets this phone talk to your gateway with its own key. On your gateway, run <code>openclaw qr</code> then scan it here.</div></div>
+  <button class="btn">▣ &nbsp;Scan Setup Code</button>
+  <div class="divider">— or —</div>
+  <div class="field"><label>PASTE SETUP CODE</label><input placeholder="eyJ1cmwiOiJ3c3M6…"></div>
+  <button class="btn2 btn-dis">Pair Device</button>
+  <div class="link" style="margin-top:14px">▸ Advanced — host, token, model</div>
+</div>
+
+<!-- STATE 2: SCANNING -->
+<div class="phone">
+  <div class="statelabel">2 · Scanning</div>
+  <h1>Scan the QR code</h1>
+  <div class="qrbox">⌜ &nbsp; ⌝<br><br>◻<br><br>⌞ &nbsp; ⌟</div>
+  <div class="card"><div class="s">Point at the QR from <span style="color:var(--accent)">openclaw qr</span>. Host and code fill in automatically.</div></div>
+  <div class="link">Enter code manually instead</div>
+</div>
+
+<!-- STATE 3: WAITING FOR APPROVAL -->
+<div class="phone">
+  <div class="statelabel">3 · Waiting for approval</div>
+  <h1>Pair this device</h1>
+  <span class="badge b-amber"><span class="dot"></span>WAITING ON GATEWAY</span>
+  <div class="steps">
+    <div class="step done"><span class="dot"></span>Code accepted — signature verified</div>
+    <div class="step active"><span class="dot"></span>Waiting for approval on your gateway</div>
+    <div class="step pend"><span class="dot"></span>Paired</div>
+  </div>
+  <div class="card">
+    <div class="t">Your gateway needs to approve this device once.</div>
+    <div class="s">Ask your OpenClaw (or run on the gateway box):</div>
+    <code>openclaw devices approve 654180ad…</code>
+    <div class="s" style="margin-top:8px">Retrying automatically — 1:42 remaining</div>
+  </div>
+  <button class="btn2">Cancel</button>
+</div>
+
+<!-- STATE 4: PAIRED -->
+<div class="phone">
+  <div class="statelabel">4 · Paired</div>
+  <h1>Pair this device</h1>
+  <span class="badge b-green"><span class="dot"></span>PAIRED</span>
+  <div class="steps">
+    <div class="step done"><span class="dot"></span>Code accepted — signature verified</div>
+    <div class="step done"><span class="dot"></span>Approved by gateway</div>
+    <div class="step done"><span class="dot"></span>Paired — key stored in Keychain</div>
+  </div>
+  <div class="card"><div class="t">This phone now has its own device key.</div><div class="s">You can revoke it anytime on the gateway with <span style="color:var(--accent)">openclaw devices</span>.</div></div>
+  <button class="btn">Start Chatting →</button>
+</div>
+
+<!-- STATE 5: FAILED -->
+<div class="phone">
+  <div class="statelabel">5 · Failed (expired code)</div>
+  <h1>Pair this device</h1>
+  <span class="badge b-red"><span class="dot"></span>CODE EXPIRED</span>
+  <div class="steps">
+    <div class="step fail"><span class="dot"></span>Setup code expired</div>
+    <div class="step pend"><span class="dot"></span>Waiting for approval</div>
+    <div class="step pend"><span class="dot"></span>Paired</div>
+  </div>
+  <div class="card">
+    <div class="t">Setup codes only live a few minutes.</div>
+    <div class="s">Generate a fresh one on your gateway:</div>
+    <code>openclaw qr</code>
+    <div class="s" style="margin-top:8px">Then scan it — takes under 10 seconds.</div>
+  </div>
+  <button class="btn">▣ &nbsp;Scan New Code</button>
+</div>
+
+</body></html>

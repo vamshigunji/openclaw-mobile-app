@@ -27,8 +27,11 @@ targets:
         UIUserInterfaceStyleForce: Dark
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
+        # TLS enforced for public hosts; plaintext only for LAN/loopback dev
+        # (eng review 2026-07-21, issue 2B — never ship ArbitraryLoads in a trust product)
         NSAppTransportSecurity:
-          NSAllowsArbitraryLoads: true
+          NSAllowsLocalNetworking: true
+        NSCameraUsageDescription: "Scan the QR setup code from your gateway to pair this device."
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.openclaw.mobile
