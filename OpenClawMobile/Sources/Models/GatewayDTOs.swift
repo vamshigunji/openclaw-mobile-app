@@ -25,34 +25,22 @@ struct ChatStreamChunk: Decodable {
     }
 }
 
-// MARK: - Non-streaming fallback response
-
-struct ChatResponse: Decodable {
-    let choices: [Choice]
-    struct Choice: Decodable {
-        let message: Message
-        struct Message: Decodable {
-            let content: String
-        }
-    }
-}
-
 // MARK: - Errors
 
 enum GatewayError: LocalizedError {
-    case notConfigured
     case unauthorized
     case unreachable(String)
     case badStatus(Int)
-    case decoding(String)
+    /// Signed bootstrap connect accepted but the device awaits operator approval
+    /// (`PAIRING_REQUIRED / wait_then_retry`, .docs/protocol.md §3) — retryable.
+    case pairingPending
 
     var errorDescription: String? {
         switch self {
-        case .notConfigured: return "No Gateway configured. Add your host & token in Settings."
         case .unauthorized:  return "Token rejected (401). Check your token in Settings."
         case .unreachable(let m): return "Can't reach Gateway: \(m)"
         case .badStatus(let c):   return "Gateway returned HTTP \(c)."
-        case .decoding(let m):    return "Unexpected response format: \(m)"
+        case .pairingPending: return "Device pairing pending — approve this device on the gateway."
         }
     }
 }

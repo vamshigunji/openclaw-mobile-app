@@ -7,7 +7,6 @@ final class ChatViewModel {
     var messages: [ChatMessage] = []
     var draft: String = ""
     var isStreaming: Bool = false
-    var errorText: String?
 
     private let settings: SettingsStore
     /// Multi-device fan-in seam (history + subscribe). Backed by the gateway WS in
@@ -22,9 +21,10 @@ final class ChatViewModel {
 
     init(settings: SettingsStore) {
         self.settings = settings
-        self.sessionId = "default" // v1: a single conversation
+        self.sessionId = "main" // v1: the default agent's session (canonical: agent:main:main)
         self.sync = settings.isConfigured
-            ? GatewayWSSyncSource(host: settings.host, token: settings.token)
+            ? GatewayWSSyncSource(host: settings.host, auth: settings.wsAuth,
+                                  identity: DeviceIdentity.loadOrCreate())
             : DemoSyncSource()
         messages = [
             ChatMessage(role: .assistant,
@@ -48,7 +48,6 @@ final class ChatViewModel {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, !isStreaming else { return }
         draft = ""
-        errorText = nil
 
         // Optimistic UI: user message appears immediately, tagged with an idempotency
         // key so its broadcast echo can be reconciled/deduped.
@@ -66,7 +65,7 @@ final class ChatViewModel {
     /// Drives the real send()/stream pipeline with a canned prompt.
     /// Used for screenshot verification via the `--seed-demo` launch arg.
     func seedDemo() {
-        draft = "what is the status?"
+        draft = ProcessInfo.processInfo.environment["SEED_TEXT"] ?? "what is the status?"
         send()
     }
 
@@ -96,10 +95,24 @@ final class ChatViewModel {
         }
     }
 
-    /// Appends a broadcast message from the gateway, skipping the echo of our own sends.
+    /// Upserts a broadcast message from the gateway: streaming `chat-run:*` updates
+    /// replace their bubble in place; echoes of our own sends are dropped.
     private func ingest(remote: ChatMessage) {
-        if let key = remote.clientMessageId, seenKeys.contains(key) { return }
-        if let key = remote.clientMessageId { seenKeys.insert(key) }
+        guard let key = remote.clientMessageId else { messages.append(remote); return }
+        if let idx = messages.lastIndex(where: { $0.clientMessageId == key }) {
+            // In-place update for streaming runs; duplicate echoes are dropped.
+            if key.hasPrefix("chat-run:") {
+                let id = messages[idx].id
+                var updated = remote
+                updated = ChatMessage(id: id, role: updated.role, text: updated.text,
+                                      isStreaming: updated.isStreaming,
+                                      clientMessageId: updated.clientMessageId)
+                messages[idx] = updated
+            }
+            return
+        }
+        if seenKeys.contains(key) { return } // echo of our optimistic send
+        seenKeys.insert(key)
         messages.append(remote)
     }
 
@@ -114,7 +127,6 @@ final class ChatViewModel {
             do {
                 try await ws.send(sessionId: sessionId, text: text, idempotencyKey: idempotencyKey)
             } catch {
-                errorText = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
                 if let idx = messages.lastIndex(where: { $0.clientMessageId == idempotencyKey }) {
                     messages[idx].failed = true
                 }
@@ -149,7 +161,6 @@ final class ChatViewModel {
                     assistant.text = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
                 }
                 update(assistantId, with: assistant)
-                errorText = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             }
             isStreaming = false
         }

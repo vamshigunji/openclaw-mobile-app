@@ -4,24 +4,23 @@ Guidance for Claude Code when working in this repository.
 
 ## What this is
 
-**OpenClaw Mobile** — a phone-first iOS chat client for talking to autonomous OpenClaw agents running on a private server (Mac Mini / VPS, typically reached over Tailscale). v1 scope is deliberately small: configure gateway host + token, list agents, text an agent, stream its reply. No cockpit control, no push notifications.
+**OpenClaw Mobile** — a phone-first iOS chat client for talking to autonomous OpenClaw agents running on a private server (Mac Mini / VPS, reached over a Cloudflare Tunnel `wss://` URL). v1 scope is deliberately small: configure gateway host + token, list agents, text an agent, stream its reply. No cockpit control, no push notifications.
 
-Key docs (read before protocol or feature work):
+Key docs — one topic each, start at the README (`.docs/archive/` is history, not guidance):
 
-- `.docs/prd.md` — product scope (what & why)
-- `.docs/architecture.md` — implementation design (how); PRD wins on scope, architecture wins on implementation detail
-- `.docs/connection-handshake.md` — **the protocol decision log**; supersedes protocol assumptions in the other two docs
+- `.docs/README.md` — **start here**: doc map, milestone status, next actions
+- `.docs/product.md` — what & why, design language
+- `.docs/architecture.md` — how the iOS app is structured
+- `.docs/protocol.md` — how we talk to the gateway (transport, handshake, device auth, scopes)
+- `.docs/sync.md` — multi-device sync (Path E, `SyncSource` seam, probes P1–P7)
 
-## Critical protocol context
+## Critical protocol context (details in `.docs/protocol.md`)
 
-The PRD/architecture assumed an OpenAI-style REST API (`POST /v1/chat/completions` + SSE). That endpoint exists on the gateway but is a **single-turn convenience only**. The locked decision (2026-07-12, see `.docs/connection-handshake.md`) is:
-
-- **Target = Gateway protocol-v4 native WebSocket RPC** (JSON `req|res|event` frames, port `18789`, docs at docs.openclaw.ai/gateway/protocol). Keep REST+SSE only as the single-turn fast path.
-- The alternative `openclaw-app` relay/Noise-XX architecture was **rejected** — incompatible protocol; its `OpenClawCore` is reference material for crypto patterns only.
-- **Token-only WS connect authenticates but gets `scopes: []`** — device pairing via setup-code is mandatory for anything beyond chat. `client.id`/`client.mode` are closed enums; wrong values 400 before auth. **LIVE 2026-07-21: `client.id` must be `openclaw-ios` (or `cli`) — the old `ios-node` now 400s.**
-- **Reachability = Cloudflare Tunnel** (Quick Tunnel for now → `wss://…trycloudflare.com`; named tunnel + domain later). Tailscale was tried and rejected. See `.docs/seam-d-design-note.md`.
-- **Setup-code pairing (verified live):** the setup code's bootstrap token goes in `auth.bootstrapToken` (NOT `auth.token`); connect must also carry a signed `device{ id, publicKey, signature, signedAt, nonce }` where `device.id = hex(sha256(raw ed25519 pubkey))`. The exact signed payload is the gateway's `buildDeviceAuthPayloadV3` (still to be sourced from the gateway box). Full ladder: `.docs/live-handshake-findings-2026-07-21.md`.
-- `tools/phase0-verify.mjs` (Node 21+, zero deps) probes a live gateway: `node tools/phase0-verify.mjs <host> [token]`. Use it to verify handshake behavior instead of assuming.
+- **Backbone = Gateway protocol-v4 native WebSocket RPC** (JSON `req|res|event` frames, port `18789`, docs at docs.openclaw.ai/gateway/protocol). The OpenAI-style REST endpoint is a **single-turn convenience only**. The `openclaw-app` relay/Noise-XX architecture was **rejected** — incompatible; its `OpenClawCore` is crypto-pattern reference only.
+- **Reachability = Cloudflare Tunnel** (Quick Tunnel now → `wss://…trycloudflare.com`; named tunnel + domain later). Tailscale was tried and rejected.
+- **Device pairing is mandatory** — token-only WS connect gets `scopes: []`. `client.id` must be `openclaw-ios` (or `cli`); setup code goes in `auth.bootstrapToken`; connect carries a signed `device{ id, publicKey, signature, signedAt, nonce }`, `device.id = hex(sha256(raw ed25519 pubkey))`.
+- **The v3 signature payload is SOLVED** (sourced from the public `openclaw` npm package): a pipe-delimited string `v3|deviceId|clientId|clientMode|role|scopes,csv|signedAtMs|token|nonce|platform|deviceFamily`, Ed25519 → base64url. Reference implementation lives in `tools/phase0-verify.mjs`.
+- `tools/phase0-verify.mjs` (Node 21+, zero deps) probes a live gateway: `node tools/phase0-verify.mjs <host> [token] [--pair <setupCode>]`. Use it to verify handshake behavior instead of assuming.
 
 ## Repository layout
 

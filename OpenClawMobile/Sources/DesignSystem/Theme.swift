@@ -58,18 +58,6 @@ extension Color {
     }
 }
 
-/// Monospaced text for logs, file paths, commands (PRD §3.3).
-struct MonospaceText: View {
-    let text: String
-    init(_ text: String) { self.text = text }
-    var body: some View {
-        Text(text)
-            .font(.system(.body, design: .monospaced))
-            .foregroundStyle(Theme.textPrimary)
-            .textSelection(.enabled)
-    }
-}
-
 /// Small color-coded status dot + label.
 struct StatusBadge: View {
     let status: AgentStatus

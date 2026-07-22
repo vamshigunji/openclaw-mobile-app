@@ -7,19 +7,23 @@ import Foundation
 /// - `send`        → `session.message` WS write (NOT part of `SyncSource`; the send
 ///                   path stays on WS with a client idempotency key per PRD-handshake §5)
 ///
-/// It sits ON TOP of an already-paired/handshaken session: the caller supplies the
-/// device-bound operator token produced by the pairing flow. Challenge-signing /
-/// Secure-Enclave pairing is owned by `.docs/connection-handshake.md` and is NOT
-/// re-implemented here — this type only replies to the `connect.challenge` with the
-/// token it was handed. If the gateway requires a device signature the token alone
-/// lacks, that surfaces as `GatewayError.unauthorized`.
+/// Every connect performs signed device-auth (.docs/protocol.md §5): it replies to
+/// `connect.challenge` with a `connect` frame carrying the Keychain-held Ed25519
+/// `device{}` signature. Steady state uses the paired `deviceToken`; first pairing
+/// passes the setup code as `auth.bootstrapToken` and surfaces
+/// `PAIRING_REQUIRED` as `GatewayError.pairingPending` until the operator approves.
+/// A `hello-ok` that mints a deviceToken reports it via `onDeviceToken`.
 ///
 /// NOTE: the live PASS/FAIL of this path (P1–P7) is a human checkpoint — see
-/// `tools/phase0-verify.mjs` and `.docs/loop-handshake-checklist.md`. This code is
+/// `tools/phase0-verify.mjs` and `.docs/sync.md`. This code is
 /// Path-A-complete but viability-UNVERIFIED until a live two-device run.
 struct GatewayWSSyncSource: SyncSource {
     let host: String
-    let token: String
+    let auth: GatewayFrames.Auth
+    let identity: DeviceIdentity
+    /// Called when hello-ok mints a device-bound token (first pairing) so the
+    /// caller can persist it (Keychain) and reconnect with `.token`.
+    var onDeviceToken: (@Sendable (String) -> Void)? = nil
 
     // MARK: - SyncSource (history + subscribe)
 
@@ -27,7 +31,7 @@ struct GatewayWSSyncSource: SyncSource {
         let ws = try openSocket()
         defer { ws.cancel(with: .goingAway, reason: nil) }
         try await handshake(ws)
-        try await write(Frames.history(sessionId: sessionId), to: ws)
+        try await write(GatewayFrames.history(sessionKey: sessionId), to: ws)
         for _ in 0..<64 {
             guard let env = try await receive(ws) else { continue }
             if env.id == "p0-history" {
@@ -45,7 +49,7 @@ struct GatewayWSSyncSource: SyncSource {
                     let ws = try openSocket()
                     defer { ws.cancel(with: .goingAway, reason: nil) }
                     try await handshake(ws)
-                    try await write(Frames.subscribe(sessionId: sessionId), to: ws)
+                    try await write(GatewayFrames.subscribe(), to: ws)
                     while !Task.isCancelled {
                         guard let env = try await receive(ws) else { continue }
                         if let msg = env.broadcastMessage { continuation.yield(msg) }
@@ -68,7 +72,7 @@ struct GatewayWSSyncSource: SyncSource {
         let ws = try openSocket()
         defer { ws.cancel(with: .goingAway, reason: nil) }
         try await handshake(ws)
-        try await write(Frames.message(sessionId: sessionId, text: text, idempotencyKey: idempotencyKey), to: ws)
+        try await write(GatewayFrames.message(sessionKey: sessionId, text: text, idempotencyKey: idempotencyKey), to: ws)
         // Best-effort: await the ack so a thrown error can fail the bubble.
         for _ in 0..<16 {
             guard let env = try await receive(ws) else { continue }
@@ -79,40 +83,72 @@ struct GatewayWSSyncSource: SyncSource {
         }
     }
 
+    // MARK: - Pairing
+
+    /// One signed connect round-trip and close. Used by the Settings pairing flow:
+    /// construct with `.bootstrap(setupCode)` and `onDeviceToken`, then call until
+    /// it stops throwing `.pairingPending` (operator approval) — hello-ok fires
+    /// `onDeviceToken` with the minted device-bound token.
+    func connectOnce() async throws {
+        let ws = try openSocket()
+        defer { ws.cancel(with: .goingAway, reason: nil) }
+        try await handshake(ws)
+    }
+
     // MARK: - Connection
 
     private func openSocket() throws -> URLSessionWebSocketTask {
-        guard let url = wsURL() else { throw GatewayError.unreachable("bad host URL") }
+        guard let url = Self.wsURL(host: host) else { throw GatewayError.unreachable("bad host URL") }
         var req = URLRequest(url: url)
         req.timeoutInterval = 30
-        if !token.isEmpty { req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+        if case .token(let t) = auth { req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization") }
         let task = URLSession.shared.webSocketTask(with: req)
         task.resume()
         return task
     }
 
-    private func wsURL() -> URL? {
+    static func wsURL(host: String) -> URL? {
         let trimmed = host.trimmingCharacters(in: .whitespaces)
         guard var comps = URLComponents(string: trimmed) else { return nil }
+        let isTLS = comps.scheme == "https" || comps.scheme == "wss"
         switch comps.scheme {
         case "https": comps.scheme = "wss"
         case "http":  comps.scheme = "ws"
         case nil:     comps.scheme = "ws"
         default:      break
         }
-        if comps.port == nil { comps.port = 18789 } // gateway default (CLAUDE.md)
+        // Gateway default port only for plain hosts (direct LAN). TLS hosts are
+        // tunnels/proxies on implicit 443 — forcing :18789 breaks them (LIVE bug
+        // 2026-07-21).
+        if comps.port == nil && !isTLS { comps.port = 18789 }
         return comps.url
     }
 
-    /// Await `connect.challenge`, reply with a token-only connect, return on hello-ok.
-    /// Does NOT sign the nonce with a device key — that is the pairing layer's job.
+    /// Await `connect.challenge`, reply with a signed device connect, return on
+    /// hello-ok. The v3 signature covers the challenge nonce + the signatureToken
+    /// (.docs/protocol.md §5); `PAIRING_REQUIRED` means the device awaits operator
+    /// approval and is retryable.
     private func handshake(_ ws: URLSessionWebSocketTask) async throws {
         for _ in 0..<16 {
             guard let env = try await receive(ws) else { continue }
             if env.event == "connect.challenge" || env.type == "connect.challenge" {
-                try await write(Frames.connect(token: token), to: ws)
+                let nonce = env.challengeNonce ?? ""
+                let device = try DeviceAuth.deviceParams(
+                    identity: identity, nonce: nonce, role: "operator",
+                    scopes: GatewayFrames.scopes,
+                    signatureToken: auth.signatureToken,
+                    signedAtMs: Int64(Date().timeIntervalSince1970 * 1000))
+                try await write(GatewayFrames.connect(auth: auth, device: device), to: ws)
             } else if env.id == "p0-connect" {
-                if env.ok == false { throw GatewayError.unauthorized }
+                if env.ok == false || env.error != nil {
+                    if env.errorCode?.contains("PAIRING_REQUIRED") == true {
+                        throw GatewayError.pairingPending
+                    }
+                    throw GatewayError.unauthorized
+                }
+                if let minted = env.payload?.auth?.deviceToken, !minted.isEmpty {
+                    onDeviceToken?(minted)
+                }
                 return
             }
         }
@@ -140,83 +176,104 @@ struct GatewayWSSyncSource: SyncSource {
     }
 }
 
-// MARK: - Outbound frames (protocol-v4 WS RPC)
+// MARK: - Inbound frame (shapes LIVE-verified 2026-07-21, tools/phase0-roundtrip.mjs)
 
-private enum Frames {
-    static func connect(token: String) -> [String: Any] {
-        [
-            "type": "req", "id": "p0-connect", "method": "connect",
-            "params": [
-                "minProtocol": 4, "maxProtocol": 4,
-                // client.id AND client.mode are CLOSED enums. LIVE 2026-07-21: client.id
-                // must be "openclaw-ios" (or "cli"); the old "ios-node" now 400s before
-                // auth. mode "node" (cli|ui|node|backend). "operator" is a ROLE, not a
-                // mode — sending it as client.mode 400s before auth.
-                // NOTE: this is still a TOKEN-ONLY connect — device-auth pairing
-                // (auth.bootstrapToken + signed device{}) is UNBUILT. See
-                // .docs/live-handshake-findings-2026-07-21.md.
-                "client": ["id": "openclaw-ios", "version": "0.1.0", "platform": "ios", "mode": "node"],
-                "role": "operator",
-                "scopes": ["operator.read", "operator.write"],
-                "auth": token.isEmpty ? [String: String]() : ["token": token],
-            ],
-        ]
-    }
-
-    static func subscribe(sessionId: String) -> [String: Any] {
-        ["type": "req", "id": "p0-subscribe", "method": "sessions.messages.subscribe",
-         "params": ["sessionId": sessionId]]
-    }
-
-    static func history(sessionId: String) -> [String: Any] {
-        ["type": "req", "id": "p0-history", "method": "sessions.messages.list",
-         "params": ["sessionId": sessionId, "limit": 500]]
-    }
-
-    static func message(sessionId: String, text: String, idempotencyKey: String) -> [String: Any] {
-        ["type": "req", "id": "p0-send", "method": "session.message",
-         "params": [
-            "sessionId": sessionId,
-            "message": ["role": "user", "content": text],
-            "idempotencyKey": idempotencyKey,
-            "clientMessageId": idempotencyKey,
-         ]]
-    }
-}
-
-// MARK: - Inbound frame (permissive — exact shape is a live unknown, P4)
-
-private struct InboundEnvelope: Decodable {
+struct InboundEnvelope: Decodable {
     var type: String?
     var id: String?
     var event: String?
     var method: String?
     var ok: Bool?
     var payload: Payload?
+    var params: Payload?
+    var error: ErrorBody?
+    var nonce: String?
+
+    struct ErrorBody: Decodable {
+        var code: String?
+        var message: String?
+    }
 
     struct Payload: Decodable {
         var messages: [WireMessage]?
         var message: WireMessage?
-    }
+        var nonce: String?
+        var auth: AuthBody?
+        var error: ErrorBody?
+        // chat stream events (state: delta|final|aborted|error)
+        var runId: String?
+        var state: String?
+        var deltaText: String?
+        var sessionKey: String?
 
-    struct WireMessage: Decodable {
-        var id: String?
-        var role: String?
-        var content: String?
-        var idempotencyKey: String?
-        var clientMessageId: String?
-
-        var asChatMessage: ChatMessage? {
-            guard let content else { return nil }
-            let role: ChatMessage.Role = (role == "assistant") ? .assistant : .user
-            return ChatMessage(role: role, text: content,
-                               clientMessageId: idempotencyKey ?? clientMessageId)
+        struct AuthBody: Decodable {
+            var scopes: [String]?
+            var deviceToken: String?
         }
     }
 
-    /// A live fan-in message, if this frame is a `session.message` broadcast.
+    /// Challenge nonce: `payload.nonce ?? params.nonce ?? nonce` (probe-verified fallbacks).
+    var challengeNonce: String? { payload?.nonce ?? params?.nonce ?? nonce }
+
+    var errorCode: String? { error?.code ?? payload?.error?.code ?? error?.message }
+
+    struct WireMessage: Decodable {
+        var role: String?
+        var text: String?          // flattened from string-or-array content
+        var idempotencyKey: String?
+
+        enum CodingKeys: String, CodingKey { case role, content, idempotencyKey }
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            role = try c.decodeIfPresent(String.self, forKey: .role)
+            idempotencyKey = try c.decodeIfPresent(String.self, forKey: .idempotencyKey)
+            // LIVE: user content is a plain string; assistant content is an array
+            // of {type:"text", text:"…"} blocks.
+            if let s = try? c.decode(String.self, forKey: .content) {
+                text = s
+            } else if let blocks = try? c.decode([ContentBlock].self, forKey: .content) {
+                text = blocks.compactMap(\.text).joined()
+            }
+        }
+
+        struct ContentBlock: Decodable {
+            var type: String?
+            var text: String?
+        }
+
+        var asChatMessage: ChatMessage? {
+            guard let text else { return nil }
+            let role: ChatMessage.Role = (role == "assistant") ? .assistant : .user
+            // LIVE: the echo of our own send carries `<idempotencyKey>:user` —
+            // strip the suffix so it matches the key the client generated. The
+            // assistant transcript message carries `cli-assistant:<runId>` —
+            // normalize to `chat-run:<runId>` so it replaces the streaming bubble.
+            var key = idempotencyKey
+            if let k = key, k.hasSuffix(":user") { key = String(k.dropLast(5)) }
+            if let k = key, k.hasPrefix("cli-assistant:") {
+                key = "chat-run:" + k.dropFirst("cli-assistant:".count)
+            }
+            return ChatMessage(role: role, text: text, clientMessageId: key)
+        }
+    }
+
+    /// The live fan-in message, if this frame carries one:
+    /// - `session.message` events → complete messages (user echo + assistant final)
+    /// - `chat` events → streaming assistant updates; `message.content` holds the
+    ///   text-so-far and `chat-run:<runId>` is a stable id for in-place updates.
     var broadcastMessage: ChatMessage? {
-        guard event == "session.message" || method == "session.message" else { return nil }
-        return payload?.message?.asChatMessage
+        switch event ?? method {
+        case "session.message":
+            return payload?.message?.asChatMessage
+        case "chat":
+            guard let p = payload, let runId = p.runId,
+                  var msg = p.message?.asChatMessage else { return nil }
+            msg.clientMessageId = "chat-run:\(runId)"
+            msg.isStreaming = (p.state == "delta")
+            return msg
+        default:
+            return nil
+        }
     }
 }

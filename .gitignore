@@ -7,3 +7,5 @@
 !.claude/hooks
 .claude/hooks/*
 !.claude/hooks/check-gstack.sh
+tools/.phase0-device.json
+.gstack/

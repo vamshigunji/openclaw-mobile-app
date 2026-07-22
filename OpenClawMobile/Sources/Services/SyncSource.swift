@@ -15,7 +15,7 @@ import Foundation
 /// sends is left open until Path D is scoped.
 ///
 /// It consumes an already-authenticated session — pairing / challenge-signing /
-/// Secure-Enclave is owned by `.docs/connection-handshake.md` and is NOT
+/// Secure-Enclave is owned by `.docs/protocol.md` and is NOT
 /// re-implemented here.
 protocol SyncSource: Sendable {
     /// Snapshot/replay backfill for a session (Path A: `sessions.messages.list`).
