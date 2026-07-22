@@ -73,6 +73,15 @@ Dark mode only. All tokens live in `Sources/DesignSystem/Theme.swift` — use th
 - Accent is terminal green (`#22C55E`); agent status colors are defined once in the DesignSystem layer.
 - Monospaced type for code/logs/paths; user bubbles green-tinted right, agent bubbles dark left.
 
+## Docs location rule
+
+**Every generated document (design docs, specs, review reports, plans — including
+output from gstack/office-hours/superpowers skills) must be saved INSIDE this
+project at `.docs/designs/` (or the matching `.docs/` subfolder), named
+`YYYY-MM-DD-<topic>-<kind>.md`.** Tools may keep their own copies elsewhere
+(e.g. `~/.gstack/projects/...`), but the project copy is mandatory — the user
+works from the repo and must be able to access every doc here.
+
 ## gstack
 
 Use the `/browse` skill from gstack for **all** web browsing. Never use `mcp__claude-in-chrome__*` tools.
