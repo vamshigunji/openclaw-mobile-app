@@ -1,0 +1,61 @@
+name: OpenClawMobile
+options:
+  bundleIdPrefix: com.openclaw
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGNING_REQUIRED: "NO"
+    CODE_SIGN_IDENTITY: ""
+targets:
+  OpenClawMobile:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+    info:
+      path: Sources/Info.plist
+      properties:
+        CFBundleDisplayName: OpenClaw
+        UILaunchScreen:
+          UIColorName: ""
+        UIUserInterfaceStyleForce: Dark
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        # TLS enforced for public hosts; plaintext only for LAN/loopback dev
+        # (eng review 2026-07-21, issue 2B — never ship ArbitraryLoads in a trust product)
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        NSCameraUsageDescription: "Scan the QR setup code from your gateway to pair this device."
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.openclaw.mobile
+        GENERATE_INFOPLIST_FILE: "NO"
+        TARGETED_DEVICE_FAMILY: "1"
+  OpenClawMobileTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests
+    dependencies:
+      - target: OpenClawMobile
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.openclaw.mobile.tests
+        GENERATE_INFOPLIST_FILE: "YES"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/OpenClawMobile.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/OpenClawMobile"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+schemes:
+  OpenClawMobile:
+    build:
+      targets:
+        OpenClawMobile: all
+        OpenClawMobileTests: [test]
+    test:
+      targets:
+        - OpenClawMobileTests
