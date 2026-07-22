@@ -1,3 +1,9 @@
 .docs
-.claude
 .serena
+
+# .claude is personal by default, but gstack team-mode files are shared
+.claude/*
+!.claude/settings.json
+!.claude/hooks
+.claude/hooks/*
+!.claude/hooks/check-gstack.sh

@@ -73,3 +73,45 @@ Dark mode only. All tokens live in `Sources/DesignSystem/Theme.swift` — use th
 - Corner radius is **4pt everywhere**; elevation via **1px borders, never shadows**.
 - Accent is terminal green (`#22C55E`); agent status colors are defined once in the DesignSystem layer.
 - Monospaced type for code/logs/paths; user bubbles green-tinted right, agent bubbles dark left.
+
+## gstack
+
+Use the `/browse` skill from gstack for **all** web browsing. Never use `mcp__claude-in-chrome__*` tools.
+
+Available gstack skills:
+
+- `/office-hours`
+- `/plan-ceo-review`
+- `/plan-eng-review`
+- `/plan-design-review`
+- `/design-consultation`
+- `/design-shotgun`
+- `/design-html`
+- `/review`
+- `/ship`
+- `/land-and-deploy`
+- `/canary`
+- `/benchmark`
+- `/browse`
+- `/connect-chrome`
+- `/qa`
+- `/qa-only`
+- `/design-review`
+- `/setup-browser-cookies`
+- `/setup-deploy`
+- `/setup-gbrain`
+- `/retro`
+- `/investigate`
+- `/document-release`
+- `/document-generate`
+- `/codex`
+- `/cso`
+- `/autoplan`
+- `/plan-devex-review`
+- `/devex-review`
+- `/careful`
+- `/freeze`
+- `/guard`
+- `/unfreeze`
+- `/gstack-upgrade`
+- `/learn`
