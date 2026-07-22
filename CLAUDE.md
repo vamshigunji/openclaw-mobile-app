@@ -77,10 +77,11 @@ Dark mode only. All tokens live in `Sources/DesignSystem/Theme.swift` — use th
 
 **Every generated document (design docs, specs, review reports, plans — including
 output from gstack/office-hours/superpowers skills) must be saved INSIDE this
-project at `.docs/designs/` (or the matching `.docs/` subfolder), named
-`YYYY-MM-DD-<topic>-<kind>.md`.** Tools may keep their own copies elsewhere
-(e.g. `~/.gstack/projects/...`), but the project copy is mandatory — the user
-works from the repo and must be able to access every doc here.
+project at `designs/` (tracked), named `YYYY-MM-DD-<topic>-<kind>.md`; visual
+assets go in `designs/assets/`.** `.docs/`, `.gstack/`, `.reviews/`, `.archive/`
+are local-only and gitignored. Tools may keep their own copies elsewhere
+(e.g. `~/.gstack/projects/...`), but the tracked project copy is mandatory —
+the user works from the repo and must be able to access every doc here.
 
 ## gstack
 

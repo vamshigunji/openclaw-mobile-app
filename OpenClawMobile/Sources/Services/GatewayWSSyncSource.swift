@@ -1,4 +1,26 @@
 import Foundation
+import os
+
+/// DEBUG wire tap — watch live with:
+/// xcrun simctl spawn booted log stream --predicate 'subsystem == "com.openclaw.mobile"' --style compact
+enum WireLog {
+    static let log = Logger(subsystem: "com.openclaw.mobile", category: "ws")
+    static func out(_ s: String) {
+        #if DEBUG
+        log.info("→ \(s, privacy: .public)")
+        #endif
+    }
+    static func inbound(_ s: String) {
+        #if DEBUG
+        log.info("← \(s.prefix(600), privacy: .public)")
+        #endif
+    }
+    static func note(_ s: String) {
+        #if DEBUG
+        log.info("· \(s, privacy: .public)")
+        #endif
+    }
+}
 
 /// Path-A `SyncSource`: gateway-native multi-device sync over protocol-v4 WS RPC.
 ///
@@ -158,7 +180,9 @@ struct GatewayWSSyncSource: SyncSource {
 
     private func write(_ frame: [String: Any], to ws: URLSessionWebSocketTask) async throws {
         let data = try JSONSerialization.data(withJSONObject: frame)
-        try await ws.send(.string(String(decoding: data, as: UTF8.self)))
+        let text = String(decoding: data, as: UTF8.self)
+        WireLog.out(text)
+        try await ws.send(.string(text))
     }
 
     private func receive(_ ws: URLSessionWebSocketTask) async throws -> InboundEnvelope? {
@@ -169,6 +193,7 @@ struct GatewayWSSyncSource: SyncSource {
         case .data(let d):   data = d
         @unknown default:    return nil
         }
+        WireLog.inbound(String(decoding: data, as: UTF8.self))
         return try? JSONDecoder().decode(InboundEnvelope.self, from: data)
     }
 

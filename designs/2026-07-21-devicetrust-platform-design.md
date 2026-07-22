@@ -265,7 +265,7 @@ Synthesized from review findings. P1 blocks TestFlight; P2 same branch; P3 follo
 
 ## Design Review Addendum (2026-07-21)
 
-Approved visual spec: `.docs/designs/assets/2026-07-21-pairing-states.png`
+Approved visual spec: `designs/assets/2026-07-21-pairing-states.png`
 (6 frames: demo-banner bridge, entry, scanning, waiting-for-approval, paired,
 failed-expired; exact Theme.swift tokens). T1 implements these screens.
 
@@ -302,7 +302,7 @@ recovery is always the primary button — never a dead-end error.
 ### Approved Mockups
 | Screen/Section | Mockup Path | Direction | Notes |
 |---|---|---|---|
-| Pairing flow (6 states) | .docs/designs/assets/2026-07-21-pairing-states.png (+ .html source) | Terminal-dark, step-ladder progress, StatusBadge-derived states | Tokens exact from Theme.swift; also at ~/.gstack/projects/vamshigunji-openclaw-mobile-app/designs/pairing-flow-20260721/ |
+| Pairing flow (6 states) | designs/assets/2026-07-21-pairing-states.png (+ .html source) | Terminal-dark, step-ladder progress, StatusBadge-derived states | Tokens exact from Theme.swift; also at ~/.gstack/projects/vamshigunji-openclaw-mobile-app/designs/pairing-flow-20260721/ |
 
 ## GSTACK REVIEW REPORT
 

@@ -1,3 +1,8 @@
+# local-only working dirs
+.docs
+.reviews
+.gstack
+.archive
 .serena
 
 # .claude is personal by default, but gstack team-mode files are shared

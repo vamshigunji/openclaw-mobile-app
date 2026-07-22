@@ -3,7 +3,7 @@ import SwiftUI
 /// Settings — pairing-first hierarchy (design review 2026-07-21, decision 1A):
 /// unpaired → pairing hero on top, manual fields under "Advanced";
 /// paired → compact status row first. Visual spec:
-/// `.docs/designs/assets/2026-07-21-pairing-states.png`.
+/// `designs/assets/2026-07-21-pairing-states.png`.
 struct SettingsView: View {
     @Bindable var settings: SettingsStore
     @Environment(\.dismiss) private var dismiss
@@ -221,8 +221,12 @@ struct SettingsView: View {
         testing = true
         testResult = nil
         defer { testing = false }
+        // Host may be stored as wss:// (from a QR) — health is plain HTTPS.
+        let httpHost = settings.host
+            .replacingOccurrences(of: "wss://", with: "https://")
+            .replacingOccurrences(of: "ws://", with: "http://")
         guard settings.isConfigured,
-              let url = URL(string: settings.host)?.appendingPathComponent("health") else {
+              let url = URL(string: httpHost)?.appendingPathComponent("health") else {
             testResult = "No host set — app runs in demo mode."
             return
         }

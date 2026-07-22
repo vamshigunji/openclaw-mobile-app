@@ -27,6 +27,7 @@
 		BEDC891FA6498670E069EAD8 /* ChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A77E7023FD142FD597F86FB /* ChatMessage.swift */; };
 		C53AE0C9C9B4C5BEFDF4AA2E /* OpenClawMobileApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD2DD81DA73103F390CCAE4D /* OpenClawMobileApp.swift */; };
 		C56EE88B886768426259229C /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 921D6E1143943A940AB488C0 /* Theme.swift */; };
+		CB16CD2307EC96919A19FFC0 /* LiveDiagnosticTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFF301D1890CD8FE2B381170 /* LiveDiagnosticTests.swift */; };
 		D0A6BE3964566FB39F45D567 /* GatewayClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CF3E9C8F4E511F59CAF523 /* GatewayClient.swift */; };
 		E12812DB19259A35FA57833C /* DeviceAuthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C51FDF53437BFDD01D4D178E /* DeviceAuthTests.swift */; };
 		FFF99AC7A643ED100689AF79 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5FD674695120456C1E892BC /* SettingsView.swift */; };
@@ -57,6 +58,7 @@
 		9DF098D9A46B7822E77C5DAF /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
 		9ED68AA2879E7319E947F4A7 /* ChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModel.swift; sourceTree = "<group>"; };
 		BF906440FA91E8C53FAAE01A /* GatewayWSSyncSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GatewayWSSyncSource.swift; sourceTree = "<group>"; };
+		BFF301D1890CD8FE2B381170 /* LiveDiagnosticTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveDiagnosticTests.swift; sourceTree = "<group>"; };
 		C3944C890D9BC63414594120 /* PairingFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingFlowTests.swift; sourceTree = "<group>"; };
 		C51FDF53437BFDD01D4D178E /* DeviceAuthTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceAuthTests.swift; sourceTree = "<group>"; };
 		C5FD674695120456C1E892BC /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -127,6 +129,7 @@
 			children = (
 				2EA8E2AB3274760009434B5A /* ConnectFrameTests.swift */,
 				C51FDF53437BFDD01D4D178E /* DeviceAuthTests.swift */,
+				BFF301D1890CD8FE2B381170 /* LiveDiagnosticTests.swift */,
 				C3944C890D9BC63414594120 /* PairingFlowTests.swift */,
 				FE7F74DC0253794361B0C1B0 /* WireProtocolTests.swift */,
 			);
@@ -266,6 +269,7 @@
 			files = (
 				A7A0E82B0B99D77C4D90AD00 /* ConnectFrameTests.swift in Sources */,
 				E12812DB19259A35FA57833C /* DeviceAuthTests.swift in Sources */,
+				CB16CD2307EC96919A19FFC0 /* LiveDiagnosticTests.swift in Sources */,
 				5A0055EB6F828A10CCFEFE7A /* PairingFlowTests.swift in Sources */,
 				84E6A0F9843126D9BBEB0241 /* WireProtocolTests.swift in Sources */,
 			);
