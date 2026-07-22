@@ -45,35 +45,41 @@ struct GatewayWSSyncSource: SyncSource {
     let identity: DeviceIdentity
     /// Called when hello-ok mints a device-bound token (first pairing) so the
     /// caller can persist it (Keychain) and reconnect with `.token`.
-    var onDeviceToken: (@Sendable (String) -> Void)? = nil
+    let onDeviceToken: (@Sendable (String) -> Void)?
+    /// T6: steady-state chat traffic shares ONE connection (single handshake,
+    /// reconnect+resubscribe, request-id correlation). Struct copies share it.
+    private let connection: GatewayConnection
+
+    init(host: String, auth: GatewayFrames.Auth, identity: DeviceIdentity,
+         onDeviceToken: (@Sendable (String) -> Void)? = nil) {
+        self.host = host
+        self.auth = auth
+        self.identity = identity
+        self.onDeviceToken = onDeviceToken
+        self.connection = GatewayConnection(host: host, auth: auth,
+                                            identity: identity,
+                                            onDeviceToken: onDeviceToken)
+    }
 
     // MARK: - SyncSource (history + subscribe)
 
     func loadHistory(sessionId: String) async throws -> [ChatMessage] {
-        let ws = try openSocket()
-        defer { ws.cancel(with: .goingAway, reason: nil) }
-        try await handshake(ws)
-        try await write(GatewayFrames.history(sessionKey: sessionId), to: ws)
-        for _ in 0..<64 {
-            guard let env = try await receive(ws) else { continue }
-            if env.id == "p0-history" {
-                if env.ok == false { throw GatewayError.badStatus(0) }
-                return (env.payload?.messages ?? []).compactMap { $0.asChatMessage }
-            }
-        }
-        throw GatewayError.unreachable("no history response")
+        let env = try await connection.request(
+            method: "chat.history", params: ["sessionKey": sessionId, "limit": 200])
+        if env.ok == false { throw GatewayError.badStatus(0) }
+        return (env.payload?.messages ?? []).compactMap { $0.asChatMessage }
     }
 
     func subscribe(sessionId: String) -> AsyncThrowingStream<ChatMessage, Error> {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    let ws = try openSocket()
-                    defer { ws.cancel(with: .goingAway, reason: nil) }
-                    try await handshake(ws)
-                    try await write(GatewayFrames.subscribe(), to: ws)
-                    while !Task.isCancelled {
-                        guard let env = try await receive(ws) else { continue }
+                    _ = try await connection.request(method: "sessions.subscribe",
+                                                     params: [String: Any]())
+                    // The actor's event stream survives reconnects (it
+                    // resubscribes internally) — no error surfaces on a drop.
+                    for await env in await connection.events() {
+                        if Task.isCancelled { break }
                         if let msg = env.broadcastMessage { continuation.yield(msg) }
                     }
                     continuation.finish()
@@ -91,18 +97,11 @@ struct GatewayWSSyncSource: SyncSource {
     /// lets every device (including the sender) reconcile the broadcast echo against
     /// its optimistic bubble.
     func send(sessionId: String, text: String, idempotencyKey: String) async throws {
-        let ws = try openSocket()
-        defer { ws.cancel(with: .goingAway, reason: nil) }
-        try await handshake(ws)
-        try await write(GatewayFrames.message(sessionKey: sessionId, text: text, idempotencyKey: idempotencyKey), to: ws)
-        // Best-effort: await the ack so a thrown error can fail the bubble.
-        for _ in 0..<16 {
-            guard let env = try await receive(ws) else { continue }
-            if env.id == "p0-send" {
-                if env.ok == false { throw GatewayError.badStatus(0) }
-                return
-            }
-        }
+        let env = try await connection.request(
+            method: "chat.send",
+            params: ["sessionKey": sessionId, "message": text,
+                     "idempotencyKey": idempotencyKey])
+        if env.ok == false { throw GatewayError.badStatus(0) }
     }
 
     // MARK: - Pairing
@@ -112,6 +111,18 @@ struct GatewayWSSyncSource: SyncSource {
     /// it stops throwing `.pairingPending` (operator approval) — hello-ok fires
     /// `onDeviceToken` with the minted device-bound token.
     func connectOnce() async throws {
+        do {
+            try await connectOnceAttempt()
+        } catch let e as URLError {
+            // One retry on transport-level failure (seen live 2026-07-22:
+            // simulator network churn failed the first pairing tap).
+            WireLog.note("pairing connect transport error (\(e.code.rawValue)), retrying once")
+            try await Task.sleep(for: .milliseconds(300))
+            try await connectOnceAttempt()
+        }
+    }
+
+    private func connectOnceAttempt() async throws {
         let ws = try openSocket()
         defer { ws.cancel(with: .goingAway, reason: nil) }
         try await handshake(ws)
