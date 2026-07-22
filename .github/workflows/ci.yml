@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: Build & Test (iOS Simulator)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select latest stable Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app && xcodebuild -version
+
+      - name: Install tools
+        run: brew install xcodegen xcbeautify
+
+      - name: Generate project
+        working-directory: OpenClawMobile
+        run: xcodegen generate
+
+      # Pick a concrete iPhone simulator that actually exists on this runner
+      # (runner sim inventory drifts between images — never hardcode a model).
+      - name: Pick a simulator
+        id: sim
+        run: |
+          UDID=$(xcrun simctl list devices available -j \
+            | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; \
+                print(next(dev['udid'] for rt in d for dev in d[rt] \
+                if dev.get('isAvailable') and 'iPhone' in dev['name']))")
+          echo "Using simulator $UDID"
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+
+      - name: Build & test
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project OpenClawMobile/OpenClawMobile.xcodeproj \
+            -scheme OpenClawMobile \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
+            -resultBundlePath TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcbeautify --renderer github-actions
+        env:
+          NSUnbufferedIO: "YES"
+
+      - name: Upload test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: TestResults
+          path: TestResults.xcresult
+          retention-days: 7
+
+  # TestFlight lane — DEFERRED until an Apple Developer team + signing secrets
+  # exist (eng review 2026-07-21, T3). Enable by removing `if: false` and
+  # adding the App Store Connect API key + provisioning to repo secrets.
+  # See designs/2026-07-21-devicetrust-platform-design.md → Distribution Plan.
+  testflight:
+    name: TestFlight (deferred — needs Apple team)
+    if: false
+    needs: build-test
+    runs-on: macos-15
+    steps:
+      - run: echo "Wire up App Store Connect signing + fastlane/altool here."
