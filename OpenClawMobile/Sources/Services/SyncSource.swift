@@ -17,6 +17,10 @@ protocol SyncSource: Sendable {
     /// The agent roster (Path A: `agents.list`). Slack-style team list.
     func listAgents() async throws -> [AgentSummary]
 
+    /// The agent's behavior/instructions (AGENTS.md), read directly (operator.read).
+    /// nil when there's no readable instructions file. Demo returns a canned note.
+    func loadInstructions(agentId: String) async throws -> String?
+
     /// Snapshot/replay backfill for one agent's session (`chat.history`).
     /// Returns oldest-first. Errors surface as `GatewayError`.
     func loadHistory(agentId: String) async throws -> [ChatMessage]
@@ -47,6 +51,9 @@ struct DemoSyncSource: SyncSource {
     ]
 
     func listAgents() async throws -> [AgentSummary] { Self.demoAgents }
+    func loadInstructions(agentId: String) async throws -> String? {
+        "Demo agent — instructions live on a real gateway (pair in Settings)."
+    }
     func loadHistory(agentId: String) async throws -> [ChatMessage] { [] }
 
     func subscribe(agentId: String?) -> AsyncThrowingStream<ChatMessage, Error> {
