@@ -22,12 +22,14 @@ struct ChatView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                HStack(spacing: 6) {
-                    Text(agent.emoji ?? "🖥")
-                    Text(agent.displayName)
-                        .font(.system(.headline, design: .monospaced))
-                        .foregroundStyle(Theme.textPrimary)
-                    StatusBadge(status: vm.isStreaming ? .working : .idle)
+                VStack(spacing: 1) {
+                    HStack(spacing: 6) {
+                        Text(agent.emoji ?? "🖥")
+                        Text(agent.displayName)
+                            .font(.system(.headline, design: .monospaced))
+                            .foregroundStyle(Theme.textPrimary)
+                    }
+                    ActivityLine(activity: vm.activity)
                 }
             }
         }
