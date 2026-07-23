@@ -56,20 +56,20 @@ struct SettingsView: View {
             infoCard(
                 title: nil,
                 body: "Pairing lets this phone talk to your gateway with its own key. On your gateway, run `openclaw qr`, then scan it here.")
-            primaryButton("▣  Scan Setup Code") { showScanner = true }
+            PrimaryButton(title: "▣  Scan Setup Code") { showScanner = true }
             Text("— or —")
                 .font(.system(.caption2, design: .monospaced))
                 .foregroundStyle(Theme.textSecondary)
                 .frame(maxWidth: .infinity)
-            field("Paste Setup Code", "eyJ1cmwiOiJ3c3M6…", text: $setupCode)
-            secondaryButton("Pair Device", disabled: SetupCode.parse(setupCode) == nil) {
+            MonoField(label: "Paste Setup Code", placeholder: "eyJ1cmwiOiJ3c3M6…", text: $setupCode)
+            PrimaryButton(title: "Pair Device", secondary: true, disabled: SetupCode.parse(setupCode) == nil) {
                 startPairing(with: setupCode)
             }
 
         case .connecting:
             pairBadge("CONNECTING", color: Theme.accent, spinning: true)
             ladder(step1: .active, step2: .pending, step3: .pending)
-            secondaryButton("Cancel") { flow.cancel() }
+            PrimaryButton(title: "Cancel", secondary: true) { flow.cancel() }
 
         case .waitingApproval(let attempt):
             pairBadge("WAITING ON GATEWAY", color: AgentStatus.waiting.color)
@@ -89,7 +89,7 @@ struct SettingsView: View {
             .padding(12)
             .background(Theme.bgSecondary)
             .overlay(RoundedRectangle(cornerRadius: Theme.radius).stroke(Theme.borderColor, lineWidth: Theme.border))
-            secondaryButton("Cancel") { flow.cancel() }
+            PrimaryButton(title: "Cancel", secondary: true) { flow.cancel() }
 
         case .paired(let minted):
             pairBadge("PAIRED", color: Theme.accent)
@@ -99,7 +99,7 @@ struct SettingsView: View {
                 body: minted
                     ? "You can revoke it anytime on the gateway with `openclaw devices`."
                     : "Device was already approved — connected with the existing key.")
-            primaryButton("Start Chatting →") { flow.reset(); dismiss() }
+            PrimaryButton(title: "Start Chatting →") { flow.reset(); dismiss() }
 
         case .failed(let reason):
             failedView(reason)
@@ -113,25 +113,25 @@ struct SettingsView: View {
             pairBadge("CODE EXPIRED", color: AgentStatus.failed.color)
             infoCard(title: "Setup codes only live a few minutes.",
                      body: "Generate a fresh one on your gateway with `openclaw qr`, then scan it — takes under 10 seconds.")
-            primaryButton("▣  Scan New Code") { flow.reset(); showScanner = true }
+            PrimaryButton(title: "▣  Scan New Code") { flow.reset(); showScanner = true }
         case .timeout:
             pairBadge("APPROVAL TIMED OUT", color: AgentStatus.failed.color)
             infoCard(title: "The approval didn't arrive in time.",
                      body: "Approve on the gateway, then retry:")
             codeBlock("openclaw devices approve \(flow.lastRequestId ?? "--latest")")
-            primaryButton("Retry") { startPairing(with: setupCode) }
+            PrimaryButton(title: "Retry") { startPairing(with: setupCode) }
         case .cameraDenied:
             pairBadge("CAMERA UNAVAILABLE", color: AgentStatus.waiting.color)
             infoCard(title: "No camera access.",
                      body: "Paste the setup code below instead — same result. (Enable camera access in iOS Settings to scan.)")
-            field("Paste Setup Code", "eyJ1cmwiOiJ3c3M6…", text: $setupCode)
-            secondaryButton("Pair Device", disabled: SetupCode.parse(setupCode) == nil) {
+            MonoField(label: "Paste Setup Code", placeholder: "eyJ1cmwiOiJ3c3M6…", text: $setupCode)
+            PrimaryButton(title: "Pair Device", secondary: true, disabled: SetupCode.parse(setupCode) == nil) {
                 startPairing(with: setupCode)
             }
         case .other(let message):
             pairBadge("PAIRING FAILED", color: AgentStatus.failed.color)
             infoCard(title: "Something went wrong.", body: message)
-            primaryButton("Retry") { startPairing(with: setupCode) }
+            PrimaryButton(title: "Retry") { startPairing(with: setupCode) }
         }
     }
 
@@ -158,10 +158,10 @@ struct SettingsView: View {
             get: { expanded || showAdvanced },
             set: { showAdvanced = $0 })) {
             VStack(alignment: .leading, spacing: 14) {
-                field("Gateway Host", "https://…trycloudflare.com", text: $settings.host)
-                field("Gateway Token", "Bearer token", text: $settings.token, secure: true)
-                field("Model", "openclaw", text: $settings.model)
-                secondaryButton(testing ? "Testing…" : "Test Connection", disabled: testing) {
+                MonoField(label: "Gateway Host", placeholder: "https://…trycloudflare.com", text: $settings.host)
+                MonoField(label: "Gateway Token", placeholder: "Bearer token", secure: true, text: $settings.token)
+                MonoField(label: "Model", placeholder: "openclaw", text: $settings.model)
+                PrimaryButton(title: testing ? "Testing…" : "Test Connection", secondary: true, disabled: testing) {
                     Task { await test() }
                 }
                 if let testResult {
@@ -320,52 +320,8 @@ struct SettingsView: View {
         .overlay(RoundedRectangle(cornerRadius: Theme.radius).stroke(Theme.borderColor, lineWidth: Theme.border))
     }
 
-    private func primaryButton(_ label: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(label)
-                .font(.system(.body, design: .monospaced).weight(.semibold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12) // ≥44pt target (a11y 3A)
-                .background(Theme.accent)
-                .foregroundStyle(Theme.bgPrimary)
-                .clipShape(RoundedRectangle(cornerRadius: Theme.radius))
-        }
-    }
 
-    private func secondaryButton(_ label: String, disabled: Bool = false, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(label)
-                .font(.system(.body, design: .monospaced).weight(.semibold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .foregroundStyle(Theme.accent)
-                .overlay(RoundedRectangle(cornerRadius: Theme.radius).stroke(Theme.accent, lineWidth: Theme.border))
-        }
-        .disabled(disabled)
-        .opacity(disabled ? 0.4 : 1)
-    }
 
-    private func field(_ label: String, _ placeholder: String, text: Binding<String>, secure: Bool = false) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(label.uppercased())
-                .font(.system(.caption2, design: .monospaced))
-                .foregroundStyle(Theme.textSecondary)
-            Group {
-                if secure {
-                    SecureField(placeholder, text: text)
-                } else {
-                    TextField(placeholder, text: text)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                }
-            }
-            .font(.system(.body, design: .monospaced))
-            .foregroundStyle(Theme.textPrimary)
-            .padding(10)
-            .background(Theme.bgSecondary)
-            .overlay(RoundedRectangle(cornerRadius: Theme.radius).stroke(Theme.borderColor, lineWidth: Theme.border))
-        }
-    }
 
     private func countdown(_ attempt: Int) -> String {
         let secs = flow.remainingSeconds(afterAttempt: attempt)

@@ -16,17 +16,11 @@ final class AgentProfileViewModel {
 
     private let sync: SyncSource
     private let isConfigured: Bool
-    private let pollInterval: Duration
-    private let maxPolls: Int
-    private let orchestratorId = "main"
 
-    init(agent: AgentSummary, sync: SyncSource, isConfigured: Bool,
-         pollInterval: Duration = .seconds(6), maxPolls: Int = 20) {
+    init(agent: AgentSummary, sync: SyncSource, isConfigured: Bool) {
         self.agent = agent
         self.sync = sync
         self.isConfigured = isConfigured
-        self.pollInterval = pollInterval
-        self.maxPolls = maxPolls
     }
 
     func load() async {
@@ -47,29 +41,25 @@ final class AgentProfileViewModel {
             return
         }
         edit = .saving
-        do {
-            try await ws.send(agentId: orchestratorId, text: req.instruction,
-                              idempotencyKey: "edit-agent-\(UUID().uuidString)")
-        } catch {
-            edit = .failed((error as? LocalizedError)?.errorDescription ?? error.localizedDescription)
-            return
-        }
         let beforeInstructions = instructions
-        for _ in 1...maxPolls {
-            try? await Task.sleep(for: pollInterval)
+        let outcome = await MainAgentTask.run(
+            ws, instruction: req.instruction,
+            idempotencyKey: "edit-agent-\(UUID().uuidString)") { [sync, agent, req] () async -> (AgentSummary?, String?)? in
             let after = (try? await sync.listAgents()) ?? []
-            let identityDone = AgentProfile.updateApplied(want: req, in: after)
             let newInstructions = try? await sync.loadInstructions(agentId: agent.id)
-            let instructionsDone = !req.instructions.trimmingCharacters(in: .whitespaces).isEmpty
+            let instructionsChanged = !req.instructions.trimmingCharacters(in: .whitespaces).isEmpty
                 && newInstructions != nil && newInstructions != beforeInstructions
-            if identityDone || instructionsDone {
-                if let fresh = after.first(where: { $0.id == agent.id }) { agent = fresh }
-                if let ni = newInstructions { instructions = ni }
-                edit = .saved
-                return
-            }
+            guard AgentProfile.updateApplied(want: req, in: after) || instructionsChanged else { return nil }
+            return (after.first(where: { $0.id == agent.id }), newInstructions)
         }
-        edit = .pending
+        switch outcome {
+        case .done(let (fresh, newInstructions)):
+            if let fresh { agent = fresh }
+            if let newInstructions { instructions = newInstructions }
+            edit = .saved
+        case .pending:         edit = .pending
+        case .failed(let msg): edit = .failed(msg)
+        }
     }
 
     func delete() async -> Bool {
@@ -77,13 +67,12 @@ final class AgentProfileViewModel {
         edit = .saving
         let text = "DELETE-AGENT REQUEST (from the profile editor). Delete agent \(agent.id) "
             + "with agents.delete, then confirm it is gone from agents.list. Reply DELETED \(agent.id)."
-        try? await ws.send(agentId: orchestratorId, text: text,
-                           idempotencyKey: "delete-agent-\(UUID().uuidString)")
-        for _ in 1...maxPolls {
-            try? await Task.sleep(for: pollInterval)
+        let outcome = await MainAgentTask.run(
+            ws, instruction: text, idempotencyKey: "delete-agent-\(UUID().uuidString)") { [sync, agent] in
             let after = (try? await sync.listAgents()) ?? []
-            if !after.contains(where: { $0.id == agent.id }) { return true }
+            return after.contains(where: { $0.id == agent.id }) ? nil : true
         }
+        if case .done = outcome { return true }
         edit = .pending
         return false
     }
