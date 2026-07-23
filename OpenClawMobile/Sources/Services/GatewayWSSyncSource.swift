@@ -125,6 +125,27 @@ struct GatewayWSSyncSource: SyncSource {
         if env.ok == false { throw GatewayError.badStatus(0) }
     }
 
+    // MARK: - Activity (live "what is the agent doing")
+
+    /// Maps the shared event stream to this agent's live activity (Thinking /
+    /// Searching the web / Running a command …). Reads the same connection events
+    /// as `subscribe`; the message subscription already sent `sessions.subscribe`.
+    func activityStream(agentId: String) -> AsyncStream<AgentActivity> {
+        AsyncStream { continuation in
+            let task = Task {
+                for await env in await connection.events() {
+                    if Task.isCancelled { break }
+                    guard env.matchesAgent(agentId) else { continue }
+                    if let activity = AgentActivity.from(env) {
+                        continuation.yield(activity)
+                    }
+                }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
     // MARK: - Pairing
 
     /// One signed connect round-trip and close. Used by the Settings pairing flow:
@@ -269,9 +290,12 @@ struct InboundEnvelope: Decodable {
         // chat stream events (state: delta|final|aborted|error)
         var runId: String?
         var state: String?
+        var stream: String?          // agent event: lifecycle|thinking|assistant|tool…
         var deltaText: String?
         var sessionKey: String?
         var agentId: String?          // which agent this event belongs to (routing)
+        // activity signals (agent / session.tool events)
+        var data: EventData?
         // agents.list result
         var agents: [AgentSummary]?
         var defaultId: String?
@@ -280,7 +304,17 @@ struct InboundEnvelope: Decodable {
             var scopes: [String]?
             var deviceToken: String?
         }
+
+        /// `data` payload of `agent` / `session.tool` events: lifecycle phase and,
+        /// for tool events, the tool name (LIVE 2026-07-22).
+        struct EventData: Decodable {
+            var phase: String?   // start | end | result | error …
+            var name: String?    // tool name (WebSearch, Bash, …) for session.tool
+        }
     }
+
+    /// Normalized event name (`event` ?? `method`) for activity mapping.
+    var eventKind: String? { event ?? method }
 
     /// The agent an inbound broadcast belongs to, for per-agent routing.
     var broadcastAgentId: String? { payload?.agentId }

@@ -129,6 +129,18 @@ Honest UX: labeled as a request to main (tens of seconds, non-deterministic;
 behavior provisioning may need a retry). Files: `CreateAgentFlow`,
 `CreateAgentViewModel`, `CreateAgentView`.
 
+**Live activity indicator (built + live-verified 2026-07-22):** the chat header
+shows a verb-ing status ("Thinking…", "Searching the web", "Running a command",
+"Typing…") mapped ONLY from real gateway signals — never guessed. Wire shapes
+(captured live): tool activity is a `session.tool` event
+`{stream:"tool", data:{phase:"start"|"result", name:"WebSearch"|"Bash"|…}}` (tool
+names are claude-cli style, capitalized); `agent` events carry
+`stream:"lifecycle"|"thinking"|"assistant"|…` with `data.phase`; `chat` carries
+`state:"delta"|"final"`. Mapping in `AgentActivity` (12-verb trimmed set), unknown
+signal → "Working…" fallback (no fabrication), pinned by `AgentActivityTests`
+against captured JSON. Files: `AgentActivity`, `ActivityLine`,
+`GatewayWSSyncSource.activityStream`.
+
 **Not yet built (the layer `agents.list` can't see):** cron-orchestrated
 sub-agents (e.g. the LinkedIn team: scout → Writer → Critic) live in
 `cron.list` / `tasks.list`, not `agents.list`. A future **Schedules** tab would

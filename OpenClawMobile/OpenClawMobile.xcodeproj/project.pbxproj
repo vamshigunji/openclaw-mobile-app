@@ -10,6 +10,7 @@
 		0394FB58BA0972D744AECA73 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 921D4721CF554602FC353179 /* ChatView.swift */; };
 		088D0D7633CA7C4482179501 /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DF098D9A46B7822E77C5DAF /* SettingsStore.swift */; };
 		0F906CD5D3C2355A7FC0EAD2 /* DeviceAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFB19A15AA197489AF27A5F7 /* DeviceAuth.swift */; };
+		1199CB34DFE84A9E9D49DCF0 /* AgentActivityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 830CFD532EB1A2EF37CD8B30 /* AgentActivityTests.swift */; };
 		15553A8DD5134A7526243A91 /* SSEDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F11E6FB712B60925129C90B /* SSEDecoder.swift */; };
 		1C91EA281AE08962C668DA08 /* AgentRosterViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 871F6D60A4B50A74077F0D98 /* AgentRosterViewModel.swift */; };
 		200ED0709259C30FD27108BE /* GatewayConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70C3082BA801BA3323718BDD /* GatewayConnection.swift */; };
@@ -40,6 +41,7 @@
 		DEBE8F17AEC104138A713F22 /* CreateAgentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CF503C9E2FAE286395F90D1 /* CreateAgentView.swift */; };
 		E0D55565B34B69CC4C708F06 /* AgentsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2F42A9E9B02A16F2BAD2913 /* AgentsListView.swift */; };
 		E12812DB19259A35FA57833C /* DeviceAuthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C51FDF53437BFDD01D4D178E /* DeviceAuthTests.swift */; };
+		E6E6092E0B61FFDBC9B21625 /* AgentActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA5D31A3265B04D46AC1E06C /* AgentActivity.swift */; };
 		EABDF9B8B1B540D29F0D84B6 /* AgentSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06435B4A733ABE8D2A4602BE /* AgentSummary.swift */; };
 		F7BAA207D1A9FD01B5C28D28 /* CreateAgentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0120B894A9B37BBE723C6DE5 /* CreateAgentTests.swift */; };
 		F84305F53585C65703E69B5E /* CreateAgentViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAE6AAA5BF72F4F90F2EFF5D /* CreateAgentViewModel.swift */; };
@@ -72,6 +74,7 @@
 		7F3170560777A2D3C4D7E8BA /* MessageBubble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubble.swift; sourceTree = "<group>"; };
 		8089D2CCBAE863CB702D3266 /* AgentRosterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentRosterTests.swift; sourceTree = "<group>"; };
 		82CF3E9C8F4E511F59CAF523 /* GatewayClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GatewayClient.swift; sourceTree = "<group>"; };
+		830CFD532EB1A2EF37CD8B30 /* AgentActivityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentActivityTests.swift; sourceTree = "<group>"; };
 		871F6D60A4B50A74077F0D98 /* AgentRosterViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentRosterViewModel.swift; sourceTree = "<group>"; };
 		89FAC2B716660E999A46AE1C /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
 		921D4721CF554602FC353179 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
@@ -80,6 +83,7 @@
 		9CF503C9E2FAE286395F90D1 /* CreateAgentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateAgentView.swift; sourceTree = "<group>"; };
 		9DF098D9A46B7822E77C5DAF /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
 		9ED68AA2879E7319E947F4A7 /* ChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModel.swift; sourceTree = "<group>"; };
+		BA5D31A3265B04D46AC1E06C /* AgentActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentActivity.swift; sourceTree = "<group>"; };
 		BF906440FA91E8C53FAAE01A /* GatewayWSSyncSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GatewayWSSyncSource.swift; sourceTree = "<group>"; };
 		BFF301D1890CD8FE2B381170 /* LiveDiagnosticTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveDiagnosticTests.swift; sourceTree = "<group>"; };
 		C3944C890D9BC63414594120 /* PairingFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingFlowTests.swift; sourceTree = "<group>"; };
@@ -166,6 +170,7 @@
 		887EA631B05BC4294E1481E4 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
+				830CFD532EB1A2EF37CD8B30 /* AgentActivityTests.swift */,
 				8089D2CCBAE863CB702D3266 /* AgentRosterTests.swift */,
 				2EA8E2AB3274760009434B5A /* ConnectFrameTests.swift */,
 				0120B894A9B37BBE723C6DE5 /* CreateAgentTests.swift */,
@@ -221,6 +226,7 @@
 		E0B9EEFC4CA3159F48132C94 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				BA5D31A3265B04D46AC1E06C /* AgentActivity.swift */,
 				06435B4A733ABE8D2A4602BE /* AgentSummary.swift */,
 				3A77E7023FD142FD597F86FB /* ChatMessage.swift */,
 				0A3D5A53640320021B36BAA0 /* GatewayDTOs.swift */,
@@ -325,6 +331,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1199CB34DFE84A9E9D49DCF0 /* AgentActivityTests.swift in Sources */,
 				FE9F9862C7247E58D8C6AB82 /* AgentRosterTests.swift in Sources */,
 				A7A0E82B0B99D77C4D90AD00 /* ConnectFrameTests.swift in Sources */,
 				F7BAA207D1A9FD01B5C28D28 /* CreateAgentTests.swift in Sources */,
@@ -342,6 +349,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E6E6092E0B61FFDBC9B21625 /* AgentActivity.swift in Sources */,
 				1C91EA281AE08962C668DA08 /* AgentRosterViewModel.swift in Sources */,
 				EABDF9B8B1B540D29F0D84B6 /* AgentSummary.swift in Sources */,
 				E0D55565B34B69CC4C708F06 /* AgentsListView.swift in Sources */,

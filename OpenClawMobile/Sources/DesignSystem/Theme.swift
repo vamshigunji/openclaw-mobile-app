@@ -58,6 +58,34 @@ extension Color {
     }
 }
 
+/// Live activity line for the chat header — a pulsing accent dot + the verb-ing
+/// label ("Searching the web", "Thinking…"), each mapped from a real gateway
+/// signal (`AgentActivity`). Idle shows a muted "Idle" so the header never jumps.
+struct ActivityLine: View {
+    let activity: AgentActivity
+    @State private var pulse = false
+
+    var body: some View {
+        HStack(spacing: 5) {
+            if let label = activity.label {
+                Circle().fill(Theme.accent)
+                    .frame(width: 5, height: 5)
+                    .opacity(pulse ? 0.3 : 1)
+                    .animation(.easeInOut(duration: 0.7).repeatForever(autoreverses: true), value: pulse)
+                Text(label)
+                    .font(.system(.caption2, design: .monospaced))
+                    .foregroundStyle(Theme.accent)
+            } else {
+                Text("Idle")
+                    .font(.system(.caption2, design: .monospaced))
+                    .foregroundStyle(Theme.textSecondary)
+            }
+        }
+        .onAppear { pulse = true }
+        .accessibilityLabel(activity.label ?? "Idle")
+    }
+}
+
 /// Small color-coded status dot + label.
 struct StatusBadge: View {
     let status: AgentStatus

@@ -25,6 +25,11 @@ protocol SyncSource: Sendable {
     /// `agentId` (including turns from other paired devices), filtered out of the
     /// shared connection-wide stream. `agentId == nil` accepts all agents.
     func subscribe(agentId: String?) -> AsyncThrowingStream<ChatMessage, Error>
+
+    /// Live "what is the agent doing right now" signal for ONE agent, mapped from
+    /// the gateway's activity events (agent/session.tool/chat). Yields on every
+    /// change; `.idle` when a run ends.
+    func activityStream(agentId: String) -> AsyncStream<AgentActivity>
 }
 
 /// Demo-backed conformer: no gateway. Keeps the app usable/screenshottable with no
@@ -48,5 +53,9 @@ struct DemoSyncSource: SyncSource {
         AsyncThrowingStream { continuation in
             continuation.finish() // no remote peers in demo mode
         }
+    }
+
+    func activityStream(agentId: String) -> AsyncStream<AgentActivity> {
+        AsyncStream { $0.finish() } // demo agents have no live activity
     }
 }

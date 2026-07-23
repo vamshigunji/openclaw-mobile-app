@@ -7,6 +7,8 @@ final class ChatViewModel {
     var messages: [ChatMessage] = []
     var draft: String = ""
     var isStreaming: Bool = false
+    /// Live "what is the agent doing" signal, mapped from real gateway events.
+    var activity: AgentActivity = .idle
 
     let agent: AgentSummary
     private let settings: SettingsStore
@@ -31,10 +33,23 @@ final class ChatViewModel {
         ]
     }
 
+    private var activityTask: Task<Void, Never>?
+
     /// Loads history and starts the live fan-in subscription. Called once from the view.
     func start() {
         Task { await loadHistory() }
         subscribeToPeers()
+        subscribeToActivity()
+    }
+
+    private func subscribeToActivity() {
+        activityTask?.cancel()
+        activityTask = Task { [agentId = agent.id] in
+            for await a in sync.activityStream(agentId: agentId) {
+                if Task.isCancelled { break }
+                activity = a
+            }
+        }
     }
 
     var canSend: Bool {
