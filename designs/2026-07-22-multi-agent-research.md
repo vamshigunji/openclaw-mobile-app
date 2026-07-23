@@ -119,6 +119,16 @@ via `InboundEnvelope.matchesAgent(_:)`. No per-agent socket.
 **Roster is never empty:** demo mode → 3 canned agents; real gateway with zero
 agents → a `main` fallback row.
 
+**"+" create-agent button (built + live-verified 2026-07-22, approach B):** the
+app can't call `agents.create` (operator.admin), so the `+` form compiles
+{name, emoji, model, behavior} into a structured instruction, `chat.send`s it to
+`main` (which holds admin and runs the create tool in-process), then polls
+`agents.list` for the newly-appeared agent (delta detection, not id-guessing) and
+drops it into the roster. Live proof: created `coin-flipper` from the form in ~20s.
+Honest UX: labeled as a request to main (tens of seconds, non-deterministic;
+behavior provisioning may need a retry). Files: `CreateAgentFlow`,
+`CreateAgentViewModel`, `CreateAgentView`.
+
 **Not yet built (the layer `agents.list` can't see):** cron-orchestrated
 sub-agents (e.g. the LinkedIn team: scout → Writer → Critic) live in
 `cron.list` / `tasks.list`, not `agents.list`. A future **Schedules** tab would
