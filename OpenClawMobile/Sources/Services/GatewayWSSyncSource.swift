@@ -89,11 +89,15 @@ struct GatewayWSSyncSource: SyncSource {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
+                    // Register the event stream FIRST, THEN subscribe — otherwise
+                    // any event that arrives between the subscribe ack and stream
+                    // registration is dropped (real race; surfaced on slow CI).
+                    let events = await connection.events()
                     _ = try await connection.request(method: "sessions.subscribe",
                                                      params: [String: Any]())
                     // The actor's event stream survives reconnects (it
                     // resubscribes internally) — no error surfaces on a drop.
-                    for await env in await connection.events() {
+                    for await env in events {
                         if Task.isCancelled { break }
                         guard env.matchesAgent(agentId) else { continue }
                         if let msg = env.broadcastMessage { continuation.yield(msg) }

@@ -66,11 +66,11 @@ final class MockGatewayE2ETests: XCTestCase {
                 if msg.role == .assistant, !msg.isStreaming { gotFinal.fulfill(); break }
             }
         }
-        try await Task.sleep(for: .milliseconds(300)) // let subscribe attach
+        try await Task.sleep(for: .milliseconds(500)) // let subscribe attach (CI headroom)
 
         try await source.send(agentId: "main", text: "hi mock", idempotencyKey: "e2e-idem-1")
 
-        await fulfillment(of: [gotFinal], timeout: 10)
+        await fulfillment(of: [gotFinal], timeout: 25)
         subTask.cancel()
 
         // Echo of our own send arrives with the client's idempotencyKey restored
