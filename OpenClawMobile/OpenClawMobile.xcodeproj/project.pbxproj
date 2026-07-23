@@ -49,6 +49,7 @@
 		EABDF9B8B1B540D29F0D84B6 /* AgentSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06435B4A733ABE8D2A4602BE /* AgentSummary.swift */; };
 		F7BAA207D1A9FD01B5C28D28 /* CreateAgentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0120B894A9B37BBE723C6DE5 /* CreateAgentTests.swift */; };
 		F84305F53585C65703E69B5E /* CreateAgentViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAE6AAA5BF72F4F90F2EFF5D /* CreateAgentViewModel.swift */; };
+		FE68A1F124B8D50B377AEA91 /* MainAgentTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = A809D8D565CB020D6C917CBE /* MainAgentTask.swift */; };
 		FE9F9862C7247E58D8C6AB82 /* AgentRosterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8089D2CCBAE863CB702D3266 /* AgentRosterTests.swift */; };
 		FFF99AC7A643ED100689AF79 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5FD674695120456C1E892BC /* SettingsView.swift */; };
 /* End PBXBuildFile section */
@@ -88,6 +89,7 @@
 		9CF503C9E2FAE286395F90D1 /* CreateAgentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateAgentView.swift; sourceTree = "<group>"; };
 		9DF098D9A46B7822E77C5DAF /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
 		9ED68AA2879E7319E947F4A7 /* ChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModel.swift; sourceTree = "<group>"; };
+		A809D8D565CB020D6C917CBE /* MainAgentTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainAgentTask.swift; sourceTree = "<group>"; };
 		BA5D31A3265B04D46AC1E06C /* AgentActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentActivity.swift; sourceTree = "<group>"; };
 		BF906440FA91E8C53FAAE01A /* GatewayWSSyncSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GatewayWSSyncSource.swift; sourceTree = "<group>"; };
 		BFF301D1890CD8FE2B381170 /* LiveDiagnosticTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveDiagnosticTests.swift; sourceTree = "<group>"; };
@@ -231,6 +233,7 @@
 				F3964CAA5668670554945489 /* CreateAgentFlow.swift */,
 				9CF503C9E2FAE286395F90D1 /* CreateAgentView.swift */,
 				DAE6AAA5BF72F4F90F2EFF5D /* CreateAgentViewModel.swift */,
+				A809D8D565CB020D6C917CBE /* MainAgentTask.swift */,
 			);
 			path = Agents;
 			sourceTree = "<group>";
@@ -384,6 +387,7 @@
 				822F008346A5750AB0466C23 /* GatewayFrames.swift in Sources */,
 				B836F72C72E63A34B2F13EDA /* GatewayWSSyncSource.swift in Sources */,
 				965DCB7162F727317F0BF400 /* KeychainService.swift in Sources */,
+				FE68A1F124B8D50B377AEA91 /* MainAgentTask.swift in Sources */,
 				54D73E4F29A0E5818C7125FB /* MessageBubble.swift in Sources */,
 				C53AE0C9C9B4C5BEFDF4AA2E /* OpenClawMobileApp.swift in Sources */,
 				579F91D931F88185F2539D37 /* PairingFlow.swift in Sources */,

@@ -58,6 +58,62 @@ extension Color {
     }
 }
 
+/// Monospaced labeled text field — the app's one form input (used by Settings,
+/// New Agent, Edit Agent). `secure` swaps to a SecureField.
+struct MonoField: View {
+    let label: String
+    var placeholder: String = ""
+    var secure: Bool = false
+    @Binding var text: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label.uppercased())
+                .font(.system(.caption2, design: .monospaced))
+                .foregroundStyle(Theme.textSecondary)
+            Group {
+                if secure {
+                    SecureField(placeholder, text: $text)
+                } else {
+                    TextField(placeholder, text: $text)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                }
+            }
+            .font(.system(.body, design: .monospaced))
+            .foregroundStyle(Theme.textPrimary)
+            .padding(10)
+            .background(Theme.bgSecondary)
+            .overlay(RoundedRectangle(cornerRadius: Theme.radius).stroke(Theme.borderColor, lineWidth: Theme.border))
+        }
+    }
+}
+
+/// Solid accent CTA (≥44pt tall). `secondary` gives the outlined variant.
+struct PrimaryButton: View {
+    let title: String
+    var secondary = false
+    var disabled = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(.body, design: .monospaced).weight(.semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .foregroundStyle(secondary ? Theme.accent : Theme.bgPrimary)
+                .background(secondary ? Color.clear : Theme.accent)
+                .overlay(secondary
+                    ? RoundedRectangle(cornerRadius: Theme.radius).stroke(Theme.accent, lineWidth: Theme.border)
+                    : nil)
+                .clipShape(RoundedRectangle(cornerRadius: Theme.radius))
+        }
+        .disabled(disabled)
+        .opacity(disabled ? 0.4 : 1)
+    }
+}
+
 /// Live activity line for the chat header — a pulsing accent dot + the verb-ing
 /// label ("Searching the web", "Thinking…"), each mapped from a real gateway
 /// signal (`AgentActivity`). Idle shows a muted "Idle" so the header never jumps.

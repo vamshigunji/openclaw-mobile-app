@@ -25,7 +25,7 @@ struct AgentProfileView: View {
                 rows
                 instructionsSection
                 if vm.canEdit {
-                    primaryButton("Edit Agent") { showEdit = true }
+                    PrimaryButton(title: "Edit Agent") { showEdit = true }
                     deleteButton
                 } else {
                     Text("Editing needs a paired gateway (Settings).")
@@ -125,17 +125,6 @@ struct AgentProfileView: View {
         }
     }
 
-    private func primaryButton(_ label: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(label)
-                .font(.system(.body, design: .monospaced).weight(.semibold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(Theme.accent)
-                .foregroundStyle(Theme.bgPrimary)
-                .clipShape(RoundedRectangle(cornerRadius: Theme.radius))
-        }
-    }
 }
 
 /// Edit sheet — routes changes through the main agent (approach B).
@@ -177,10 +166,10 @@ struct AgentEditView: View {
 
     private var form: some View {
         VStack(alignment: .leading, spacing: 16) {
-            field("Name", $req.name)
+            MonoField(label: "Name", text: $req.name)
             HStack(spacing: 12) {
-                field("Emoji", $req.emoji).frame(width: 90)
-                field("Model", $req.model)
+                MonoField(label: "Emoji", text: $req.emoji).frame(width: 90)
+                MonoField(label: "Model", text: $req.model)
             }
             VStack(alignment: .leading, spacing: 6) {
                 Text("INSTRUCTIONS (AGENTS.md)")
@@ -228,16 +217,4 @@ struct AgentEditView: View {
         .frame(maxWidth: .infinity).padding(.top, 40)
     }
 
-    private func field(_ label: String, _ text: Binding<String>) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(label.uppercased())
-                .font(.system(.caption2, design: .monospaced))
-                .foregroundStyle(Theme.textSecondary)
-            TextField("", text: text)
-                .textInputAutocapitalization(.never).autocorrectionDisabled()
-                .font(.system(.body, design: .monospaced)).foregroundStyle(Theme.textPrimary)
-                .padding(10).background(Theme.bgSecondary)
-                .overlay(RoundedRectangle(cornerRadius: Theme.radius).stroke(Theme.borderColor, lineWidth: Theme.border))
-        }
-    }
 }

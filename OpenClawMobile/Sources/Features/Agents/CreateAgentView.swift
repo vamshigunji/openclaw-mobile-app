@@ -60,10 +60,10 @@ struct CreateAgentView: View {
 
     private var form: some View {
         VStack(alignment: .leading, spacing: 16) {
-            field("Name", "Indian Timer", text: $vm.req.name)
+            MonoField(label: "Name", placeholder: "Indian Timer", text: $vm.req.name)
             HStack(spacing: 12) {
-                field("Emoji", "🇮🇳", text: $vm.req.emoji).frame(width: 90)
-                field("Model (optional)", "haiku", text: $vm.req.model)
+                MonoField(label: "Emoji", placeholder: "🇮🇳", text: $vm.req.emoji).frame(width: 90)
+                MonoField(label: "Model (optional)", placeholder: "haiku", text: $vm.req.model)
             }
             VStack(alignment: .leading, spacing: 6) {
                 Text("WHAT SHOULD IT DO?")
@@ -83,7 +83,7 @@ struct CreateAgentView: View {
                         .foregroundStyle(Theme.textSecondary)
                 }
             }
-            primaryButton("Create Agent", disabled: !vm.canSubmit) {
+            PrimaryButton(title: "Create Agent", disabled: !vm.canSubmit) {
                 Task { await vm.submit(); finishIfDone() }
             }
             Text(app.settings.isConfigured
@@ -121,7 +121,7 @@ struct CreateAgentView: View {
             Text("It's in your Agents list now.")
                 .font(.system(.caption, design: .monospaced))
                 .foregroundStyle(Theme.textSecondary)
-            primaryButton("Open \(a.displayName) →") { onCreated(a); dismiss() }
+            PrimaryButton(title: "Open \(a.displayName) →") { onCreated(a); dismiss() }
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 40)
@@ -137,7 +137,7 @@ struct CreateAgentView: View {
                 .font(.system(.caption, design: .monospaced))
                 .foregroundStyle(Theme.textSecondary)
                 .multilineTextAlignment(.center)
-            primaryButton("Done") { dismiss() }
+            PrimaryButton(title: "Done") { dismiss() }
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 40)
@@ -164,33 +164,5 @@ struct CreateAgentView: View {
 
     // MARK: - Components (Theme tokens only)
 
-    private func field(_ label: String, _ placeholder: String, text: Binding<String>) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(label.uppercased())
-                .font(.system(.caption2, design: .monospaced))
-                .foregroundStyle(Theme.textSecondary)
-            TextField(placeholder, text: text)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .font(.system(.body, design: .monospaced))
-                .foregroundStyle(Theme.textPrimary)
-                .padding(10)
-                .background(Theme.bgSecondary)
-                .overlay(RoundedRectangle(cornerRadius: Theme.radius).stroke(Theme.borderColor, lineWidth: Theme.border))
-        }
-    }
 
-    private func primaryButton(_ label: String, disabled: Bool = false, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(label)
-                .font(.system(.body, design: .monospaced).weight(.semibold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(Theme.accent)
-                .foregroundStyle(Theme.bgPrimary)
-                .clipShape(RoundedRectangle(cornerRadius: Theme.radius))
-        }
-        .disabled(disabled)
-        .opacity(disabled ? 0.4 : 1)
-    }
 }

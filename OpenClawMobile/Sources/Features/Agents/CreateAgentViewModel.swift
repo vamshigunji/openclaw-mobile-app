@@ -23,17 +23,9 @@ final class CreateAgentViewModel {
     private let sync: SyncSource
     private let isConfigured: Bool
 
-    /// The default agent to route the request through (usually "main").
-    private let orchestratorId = "main"
-    private let pollInterval: Duration
-    private let maxPolls: Int
-
-    init(sync: SyncSource, isConfigured: Bool,
-         pollInterval: Duration = .seconds(6), maxPolls: Int = 20) {
+    init(sync: SyncSource, isConfigured: Bool) {
         self.sync = sync
         self.isConfigured = isConfigured
-        self.pollInterval = pollInterval
-        self.maxPolls = maxPolls
     }
 
     var canSubmit: Bool {
@@ -58,25 +50,17 @@ final class CreateAgentViewModel {
 
         phase = .asking
         let before = Set((try? await sync.listAgents())?.map(\.id) ?? [])
-        do {
-            try await ws.send(agentId: orchestratorId, text: req.instruction,
-                              idempotencyKey: "create-agent-\(UUID().uuidString)")
-        } catch {
-            phase = .failed((error as? LocalizedError)?.errorDescription ?? error.localizedDescription)
-            return
+        let outcome = await MainAgentTask.run(
+            ws, instruction: req.instruction,
+            idempotencyKey: "create-agent-\(UUID().uuidString)",
+            onPoll: { self.elapsed = $0 }) { [sync, req] () async -> AgentSummary? in
+            guard let after = try? await sync.listAgents() else { return nil }
+            return CreateAgentFlow.newAgent(before: before, after: after, preferId: req.normalizedId)
         }
-
-        // Poll agents.list for the delta.
-        for i in 1...maxPolls {
-            try? await Task.sleep(for: pollInterval)
-            elapsed = i * Int(pollInterval.components.seconds)
-            guard let after = try? await sync.listAgents() else { continue }
-            if let created = CreateAgentFlow.newAgent(before: before, after: after,
-                                                      preferId: req.normalizedId) {
-                phase = .created(created)
-                return
-            }
+        switch outcome {
+        case .done(let created): phase = .created(created)
+        case .pending:           phase = .pending
+        case .failed(let msg):   phase = .failed(msg)
         }
-        phase = .pending
     }
 }
