@@ -11,6 +11,7 @@
 		088D0D7633CA7C4482179501 /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DF098D9A46B7822E77C5DAF /* SettingsStore.swift */; };
 		0F906CD5D3C2355A7FC0EAD2 /* DeviceAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFB19A15AA197489AF27A5F7 /* DeviceAuth.swift */; };
 		15553A8DD5134A7526243A91 /* SSEDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F11E6FB712B60925129C90B /* SSEDecoder.swift */; };
+		1C91EA281AE08962C668DA08 /* AgentRosterViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 871F6D60A4B50A74077F0D98 /* AgentRosterViewModel.swift */; };
 		200ED0709259C30FD27108BE /* GatewayConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70C3082BA801BA3323718BDD /* GatewayConnection.swift */; };
 		33BD379AF95726F18CEF3F4D /* ChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ED68AA2879E7319E947F4A7 /* ChatViewModel.swift */; };
 		519222A28B7279C6844CA917 /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89FAC2B716660E999A46AE1C /* QRScannerView.swift */; };
@@ -24,8 +25,10 @@
 		84E6A0F9843126D9BBEB0241 /* WireProtocolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F74DC0253794361B0C1B0 /* WireProtocolTests.swift */; };
 		965DCB7162F727317F0BF400 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDFCAD324B8F99D70F30B3D0 /* KeychainService.swift */; };
 		9CAF5C8CB667BDFEC7CD0D8E /* MockGateway.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4280E1F48751A928B0F9ACAF /* MockGateway.swift */; };
+		A520BEB63497059C4A196131 /* RootTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CE662D3D1A4E0B2A4EC3791 /* RootTabView.swift */; };
 		A71D131FF799713E4F004C42 /* SyncSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7397BB53589B3AD5C1B1B85 /* SyncSource.swift */; };
 		A7A0E82B0B99D77C4D90AD00 /* ConnectFrameTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EA8E2AB3274760009434B5A /* ConnectFrameTests.swift */; };
+		A8B2E74993D97B5A8DC96AA1 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7666FC619A47E52D385996B /* AppModel.swift */; };
 		B836F72C72E63A34B2F13EDA /* GatewayWSSyncSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF906440FA91E8C53FAAE01A /* GatewayWSSyncSource.swift */; };
 		BEDC891FA6498670E069EAD8 /* ChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A77E7023FD142FD597F86FB /* ChatMessage.swift */; };
 		C53AE0C9C9B4C5BEFDF4AA2E /* OpenClawMobileApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD2DD81DA73103F390CCAE4D /* OpenClawMobileApp.swift */; };
@@ -33,7 +36,10 @@
 		CB16CD2307EC96919A19FFC0 /* LiveDiagnosticTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFF301D1890CD8FE2B381170 /* LiveDiagnosticTests.swift */; };
 		D0A6BE3964566FB39F45D567 /* GatewayClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CF3E9C8F4E511F59CAF523 /* GatewayClient.swift */; };
 		D8C644B8A31A0F3EAA0BF3AA /* MockGatewayE2ETests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32C4159A61FB3546F9E2F6F0 /* MockGatewayE2ETests.swift */; };
+		E0D55565B34B69CC4C708F06 /* AgentsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2F42A9E9B02A16F2BAD2913 /* AgentsListView.swift */; };
 		E12812DB19259A35FA57833C /* DeviceAuthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C51FDF53437BFDD01D4D178E /* DeviceAuthTests.swift */; };
+		EABDF9B8B1B540D29F0D84B6 /* AgentSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06435B4A733ABE8D2A4602BE /* AgentSummary.swift */; };
+		FE9F9862C7247E58D8C6AB82 /* AgentRosterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8089D2CCBAE863CB702D3266 /* AgentRosterTests.swift */; };
 		FFF99AC7A643ED100689AF79 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5FD674695120456C1E892BC /* SettingsView.swift */; };
 /* End PBXBuildFile section */
 
@@ -48,6 +54,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		06435B4A733ABE8D2A4602BE /* AgentSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentSummary.swift; sourceTree = "<group>"; };
 		0A3D5A53640320021B36BAA0 /* GatewayDTOs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GatewayDTOs.swift; sourceTree = "<group>"; };
 		0A8EA01DB38B2CD0B5A78ADC /* OpenClawMobileTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = OpenClawMobileTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2EA8E2AB3274760009434B5A /* ConnectFrameTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectFrameTests.swift; sourceTree = "<group>"; };
@@ -58,10 +65,13 @@
 		4F11E6FB712B60925129C90B /* SSEDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSEDecoder.swift; sourceTree = "<group>"; };
 		70C3082BA801BA3323718BDD /* GatewayConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GatewayConnection.swift; sourceTree = "<group>"; };
 		7F3170560777A2D3C4D7E8BA /* MessageBubble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubble.swift; sourceTree = "<group>"; };
+		8089D2CCBAE863CB702D3266 /* AgentRosterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentRosterTests.swift; sourceTree = "<group>"; };
 		82CF3E9C8F4E511F59CAF523 /* GatewayClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GatewayClient.swift; sourceTree = "<group>"; };
+		871F6D60A4B50A74077F0D98 /* AgentRosterViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentRosterViewModel.swift; sourceTree = "<group>"; };
 		89FAC2B716660E999A46AE1C /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
 		921D4721CF554602FC353179 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		921D6E1143943A940AB488C0 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		9CE662D3D1A4E0B2A4EC3791 /* RootTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootTabView.swift; sourceTree = "<group>"; };
 		9DF098D9A46B7822E77C5DAF /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
 		9ED68AA2879E7319E947F4A7 /* ChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModel.swift; sourceTree = "<group>"; };
 		BF906440FA91E8C53FAAE01A /* GatewayWSSyncSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GatewayWSSyncSource.swift; sourceTree = "<group>"; };
@@ -73,6 +83,8 @@
 		CFB19A15AA197489AF27A5F7 /* DeviceAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceAuth.swift; sourceTree = "<group>"; };
 		D0DE3B8599C07C4C806FD649 /* GatewayConnectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GatewayConnectionTests.swift; sourceTree = "<group>"; };
 		D2283271EC88D2077ED8B52E /* OpenClawMobile.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = OpenClawMobile.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D2F42A9E9B02A16F2BAD2913 /* AgentsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentsListView.swift; sourceTree = "<group>"; };
+		D7666FC619A47E52D385996B /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		E7397BB53589B3AD5C1B1B85 /* SyncSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncSource.swift; sourceTree = "<group>"; };
 		EDFCAD324B8F99D70F30B3D0 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
 		EF712C57ECDC56EFFDE12A9B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -107,7 +119,9 @@
 		58B0296BF9632FDE8E295EE6 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				DB03D35F662BC254ABD7930D /* Agents */,
 				7DB6E538919CC7B1F558013C /* Chat */,
+				86DC167755CBFE425C5F4F68 /* Root */,
 				C90A012DAC777A533A1865BB /* Settings */,
 			);
 			path = Features;
@@ -132,9 +146,19 @@
 			path = Chat;
 			sourceTree = "<group>";
 		};
+		86DC167755CBFE425C5F4F68 /* Root */ = {
+			isa = PBXGroup;
+			children = (
+				D7666FC619A47E52D385996B /* AppModel.swift */,
+				9CE662D3D1A4E0B2A4EC3791 /* RootTabView.swift */,
+			);
+			path = Root;
+			sourceTree = "<group>";
+		};
 		887EA631B05BC4294E1481E4 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
+				8089D2CCBAE863CB702D3266 /* AgentRosterTests.swift */,
 				2EA8E2AB3274760009434B5A /* ConnectFrameTests.swift */,
 				C51FDF53437BFDD01D4D178E /* DeviceAuthTests.swift */,
 				D0DE3B8599C07C4C806FD649 /* GatewayConnectionTests.swift */,
@@ -173,9 +197,19 @@
 			path = Settings;
 			sourceTree = "<group>";
 		};
+		DB03D35F662BC254ABD7930D /* Agents */ = {
+			isa = PBXGroup;
+			children = (
+				871F6D60A4B50A74077F0D98 /* AgentRosterViewModel.swift */,
+				D2F42A9E9B02A16F2BAD2913 /* AgentsListView.swift */,
+			);
+			path = Agents;
+			sourceTree = "<group>";
+		};
 		E0B9EEFC4CA3159F48132C94 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				06435B4A733ABE8D2A4602BE /* AgentSummary.swift */,
 				3A77E7023FD142FD597F86FB /* ChatMessage.swift */,
 				0A3D5A53640320021B36BAA0 /* GatewayDTOs.swift */,
 			);
@@ -279,6 +313,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FE9F9862C7247E58D8C6AB82 /* AgentRosterTests.swift in Sources */,
 				A7A0E82B0B99D77C4D90AD00 /* ConnectFrameTests.swift in Sources */,
 				E12812DB19259A35FA57833C /* DeviceAuthTests.swift in Sources */,
 				68CF91BA23EA75CD753E1782 /* GatewayConnectionTests.swift in Sources */,
@@ -294,6 +329,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1C91EA281AE08962C668DA08 /* AgentRosterViewModel.swift in Sources */,
+				EABDF9B8B1B540D29F0D84B6 /* AgentSummary.swift in Sources */,
+				E0D55565B34B69CC4C708F06 /* AgentsListView.swift in Sources */,
+				A8B2E74993D97B5A8DC96AA1 /* AppModel.swift in Sources */,
 				581AAD39E89754598F573F04 /* ChatInputBar.swift in Sources */,
 				BEDC891FA6498670E069EAD8 /* ChatMessage.swift in Sources */,
 				0394FB58BA0972D744AECA73 /* ChatView.swift in Sources */,
@@ -309,6 +348,7 @@
 				C53AE0C9C9B4C5BEFDF4AA2E /* OpenClawMobileApp.swift in Sources */,
 				579F91D931F88185F2539D37 /* PairingFlow.swift in Sources */,
 				519222A28B7279C6844CA917 /* QRScannerView.swift in Sources */,
+				A520BEB63497059C4A196131 /* RootTabView.swift in Sources */,
 				15553A8DD5134A7526243A91 /* SSEDecoder.swift in Sources */,
 				088D0D7633CA7C4482179501 /* SettingsStore.swift in Sources */,
 				FFF99AC7A643ED100689AF79 /* SettingsView.swift in Sources */,

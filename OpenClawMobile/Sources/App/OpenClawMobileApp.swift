@@ -2,9 +2,10 @@ import SwiftUI
 
 @main
 struct OpenClawMobileApp: App {
-    @State private var settings = SettingsStore()
+    @State private var app: AppModel
 
     init() {
+        let settings = SettingsStore()
         #if DEBUG
         // Simulator/E2E seeding: inject a pre-paired identity so automated runs
         // can hit a live gateway without driving the pairing UI.
@@ -16,11 +17,12 @@ struct OpenClawMobileApp: App {
             KeychainService.set(keyB64, for: "device.ed25519.rawPrivateKey")
         }
         #endif
+        _app = State(initialValue: AppModel(settings: settings))
     }
 
     var body: some Scene {
         WindowGroup {
-            ChatView(settings: settings)
+            RootTabView(app: app)
                 .preferredColorScheme(.dark)
         }
     }

@@ -8,29 +8,26 @@ final class ChatViewModel {
     var draft: String = ""
     var isStreaming: Bool = false
 
+    let agent: AgentSummary
     private let settings: SettingsStore
-    /// Multi-device fan-in seam (history + subscribe). Backed by the gateway WS in
-    /// Path A, by a future BFF in Path D — the view model never depends on the
-    /// concrete transport for history/subscribe.
+    /// Shared multi-agent connection (one socket for all agents). Backed by the
+    /// gateway WS in Path A, a future BFF in Path D — the view model never depends
+    /// on the concrete transport.
     private let sync: SyncSource
-    private let sessionId: String
     private var subscription: Task<Void, Never>?
     /// Idempotency keys already rendered locally — used to drop the gateway's echo of
     /// our own sends (PRD-handshake P3 self-echo → no double-render).
     private var seenKeys: Set<String> = []
 
-    init(settings: SettingsStore) {
+    init(agent: AgentSummary, sync: SyncSource, settings: SettingsStore) {
+        self.agent = agent
+        self.sync = sync
         self.settings = settings
-        self.sessionId = "main" // v1: the default agent's session (canonical: agent:main:main)
-        self.sync = settings.isConfigured
-            ? GatewayWSSyncSource(host: settings.host, auth: settings.wsAuth,
-                                  identity: DeviceIdentity.loadOrCreate())
-            : DemoSyncSource()
         messages = [
             ChatMessage(role: .assistant,
                         text: settings.isConfigured
-                            ? "Connected. Text your agent anything — e.g. \"what is the status?\""
-                            : "Demo mode — no Gateway yet. Try \"what is the status?\" or add your VPS in Settings.")
+                            ? "Connected to \(agent.displayName). Text anything."
+                            : "Demo mode — \(agent.displayName). Try \"what is the status?\" or pair your gateway in Settings.")
         ]
     }
 
@@ -73,7 +70,7 @@ final class ChatViewModel {
 
     private func loadHistory() async {
         do {
-            let history = try await sync.loadHistory(sessionId: sessionId)
+            let history = try await sync.loadHistory(agentId: agent.id)
             guard !history.isEmpty else { return }
             messages.insert(contentsOf: history, at: 0)
             for m in history { if let k = m.clientMessageId { seenKeys.insert(k) } }
@@ -84,9 +81,9 @@ final class ChatViewModel {
 
     private func subscribeToPeers() {
         subscription?.cancel()
-        subscription = Task { [sessionId] in
+        subscription = Task { [agentId = agent.id] in
             do {
-                for try await message in sync.subscribe(sessionId: sessionId) {
+                for try await message in sync.subscribe(agentId: agentId) {
                     ingest(remote: message)
                 }
             } catch {
@@ -125,7 +122,7 @@ final class ChatViewModel {
         isStreaming = true
         Task {
             do {
-                try await ws.send(sessionId: sessionId, text: text, idempotencyKey: idempotencyKey)
+                try await ws.send(agentId: agent.id, text: text, idempotencyKey: idempotencyKey)
             } catch {
                 if let idx = messages.lastIndex(where: { $0.clientMessageId == idempotencyKey }) {
                     messages[idx].failed = true

@@ -1,42 +1,50 @@
 import Foundation
 
-/// The multi-device sync seam (PRD-handshake Path E / seam toward Path D).
+/// The multi-device / multi-agent sync seam (PRD-handshake Path E / seam toward Path D).
 ///
-/// Abstracts **history load + subscribe** away from any single transport so the
-/// Chat view model never talks to `GatewayClient` (or a future BFF) directly for
-/// fan-in. In Path A this is backed by the gateway's protocol-v4 WS RPC
-/// (`GatewayWSSyncSource`); in a future Path D the *same* protocol is backed by a
-/// backend-for-frontend — the UI, optimistic-send, and cache logic do not change
-/// across that swap.
+/// Abstracts **roster + history + subscribe** away from any single transport so the
+/// UI never talks to `GatewayClient` (or a future BFF) directly. In Path A this is
+/// backed by the gateway's protocol-v4 WS RPC (`GatewayWSSyncSource`); a future
+/// Path D backs the same protocol with a backend-for-frontend without UI changes.
 ///
-/// Deliberately does **not** abstract *sending*: per PRD-handshake §5 the send path
-/// stays on the WS write path with a client idempotency key (see
-/// `GatewayWSSyncSource.send`). Whether a future BFF should also own batching/queued
-/// sends is left open until Path D is scoped.
+/// Multi-agent: one connection carries every agent's traffic. `subscribe` filters
+/// the shared event stream to a single agent so each thread only sees its own.
 ///
-/// It consumes an already-authenticated session — pairing / challenge-signing /
-/// Secure-Enclave is owned by `.docs/protocol.md` and is NOT
-/// re-implemented here.
+/// Sending stays on the WS write path with a client idempotency key (see
+/// `GatewayWSSyncSource.send`). Pairing / challenge-signing is owned by
+/// `.docs/protocol.md` and is NOT re-implemented here.
 protocol SyncSource: Sendable {
-    /// Snapshot/replay backfill for a session (Path A: `sessions.messages.list`).
-    /// Returns oldest-first. Errors surface as `GatewayError`.
-    func loadHistory(sessionId: String) async throws -> [ChatMessage]
+    /// The agent roster (Path A: `agents.list`). Slack-style team list.
+    func listAgents() async throws -> [AgentSummary]
 
-    /// Live fan-in: yields every `session.message` the gateway broadcasts for this
-    /// session, including turns originating on *other* paired devices. The stream
-    /// finishes when the subscription closes; failures throw `GatewayError`.
-    func subscribe(sessionId: String) -> AsyncThrowingStream<ChatMessage, Error>
+    /// Snapshot/replay backfill for one agent's session (`chat.history`).
+    /// Returns oldest-first. Errors surface as `GatewayError`.
+    func loadHistory(agentId: String) async throws -> [ChatMessage]
+
+    /// Live fan-in for ONE agent: yields every message the gateway broadcasts for
+    /// `agentId` (including turns from other paired devices), filtered out of the
+    /// shared connection-wide stream. `agentId == nil` accepts all agents.
+    func subscribe(agentId: String?) -> AsyncThrowingStream<ChatMessage, Error>
 }
 
-/// Demo-backed conformer: a single standalone device with no peers and no gateway.
-/// Keeps the app usable/screenshottable with no host configured (CLAUDE.md: the
-/// demo path must be preserved). History is empty and there is nothing to fan in,
-/// so `subscribe` finishes immediately — the demo reply is produced locally by
+/// Demo-backed conformer: no gateway. Keeps the app usable/screenshottable with no
+/// host configured (CLAUDE.md: the demo path must be preserved). Ships a small
+/// canned roster so the agents list is never empty; replies come from
 /// `GatewayClient.demoStream`, unchanged.
 struct DemoSyncSource: SyncSource {
-    func loadHistory(sessionId: String) async throws -> [ChatMessage] { [] }
+    static let demoAgents: [AgentSummary] = [
+        AgentSummary(id: "main", name: "Assistant", emoji: "🤖",
+                     model: "claude-opus-4-8", workspace: "~/workspace"),
+        AgentSummary(id: "linkedin-team", name: "LinkedIn Team", emoji: "💼",
+                     model: "claude-opus-4-8", workspace: "~/agents/linkedin"),
+        AgentSummary(id: "indian-timer", name: "Indian-Timer", emoji: "🇮🇳",
+                     model: "claude-haiku-4-5", workspace: "~/agents/indian-timer"),
+    ]
 
-    func subscribe(sessionId: String) -> AsyncThrowingStream<ChatMessage, Error> {
+    func listAgents() async throws -> [AgentSummary] { Self.demoAgents }
+    func loadHistory(agentId: String) async throws -> [ChatMessage] { [] }
+
+    func subscribe(agentId: String?) -> AsyncThrowingStream<ChatMessage, Error> {
         AsyncThrowingStream { continuation in
             continuation.finish() // no remote peers in demo mode
         }
