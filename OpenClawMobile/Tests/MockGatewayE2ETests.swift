@@ -61,15 +61,14 @@ final class MockGatewayE2ETests: XCTestCase {
         var received: [ChatMessage] = []
         let gotFinal = expectation(description: "assistant final received")
         let subTask = Task {
-            for try await msg in source.subscribe(sessionId: "main") {
+            for try await msg in source.subscribe(agentId: nil) {
                 received.append(msg)
                 if msg.role == .assistant, !msg.isStreaming { gotFinal.fulfill(); break }
             }
         }
         try await Task.sleep(for: .milliseconds(300)) // let subscribe attach
 
-        try await source.send(sessionId: "main", text: "hi mock",
-                              idempotencyKey: "e2e-idem-1")
+        try await source.send(agentId: "main", text: "hi mock", idempotencyKey: "e2e-idem-1")
 
         await fulfillment(of: [gotFinal], timeout: 10)
         subTask.cancel()
@@ -88,7 +87,7 @@ final class MockGatewayE2ETests: XCTestCase {
         let source = GatewayWSSyncSource(
             host: gateway.wsHost, auth: .token("mock-device-token-1"),
             identity: DeviceIdentity())
-        let history = try await source.loadHistory(sessionId: "main")
+        let history = try await source.loadHistory(agentId: "main")
         XCTAssertEqual(history.count, 1)
         XCTAssertEqual(history.first?.text, "Prior message from history.")
     }

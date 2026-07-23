@@ -61,16 +61,31 @@ struct GatewayWSSyncSource: SyncSource {
                                             onDeviceToken: onDeviceToken)
     }
 
-    // MARK: - SyncSource (history + subscribe)
+    // MARK: - SyncSource (roster + history + subscribe)
 
-    func loadHistory(sessionId: String) async throws -> [ChatMessage] {
+    /// LIVE-verified 2026-07-22: texting agent `<id>` needs the FULL canonical
+    /// session key `agent:<id>:main` WITH a matching `agentId`. A bare key + a
+    /// separate agentId is rejected ("agentId does not match session key").
+    static func sessionKey(forAgent id: String) -> String { "agent:\(id):main" }
+
+    func listAgents() async throws -> [AgentSummary] {
+        let env = try await connection.request(method: "agents.list", params: [String: Any]())
+        if env.ok == false { throw GatewayError.badStatus(0) }
+        return env.payload?.agents ?? []
+    }
+
+    func loadHistory(agentId: String) async throws -> [ChatMessage] {
         let env = try await connection.request(
-            method: "chat.history", params: ["sessionKey": sessionId, "limit": 200])
+            method: "chat.history",
+            params: ["sessionKey": Self.sessionKey(forAgent: agentId),
+                     "agentId": agentId, "limit": 200])
         if env.ok == false { throw GatewayError.badStatus(0) }
         return (env.payload?.messages ?? []).compactMap { $0.asChatMessage }
     }
 
-    func subscribe(sessionId: String) -> AsyncThrowingStream<ChatMessage, Error> {
+    /// Subscribes once connection-wide, then filters the shared stream to this
+    /// agent so each thread only sees its own turns (multi-agent routing).
+    func subscribe(agentId: String?) -> AsyncThrowingStream<ChatMessage, Error> {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
@@ -80,6 +95,7 @@ struct GatewayWSSyncSource: SyncSource {
                     // resubscribes internally) — no error surfaces on a drop.
                     for await env in await connection.events() {
                         if Task.isCancelled { break }
+                        guard env.matchesAgent(agentId) else { continue }
                         if let msg = env.broadcastMessage { continuation.yield(msg) }
                     }
                     continuation.finish()
@@ -96,10 +112,11 @@ struct GatewayWSSyncSource: SyncSource {
     /// Path-A write-of-record. `idempotencyKey` makes a resend-on-reconnect safe and
     /// lets every device (including the sender) reconcile the broadcast echo against
     /// its optimistic bubble.
-    func send(sessionId: String, text: String, idempotencyKey: String) async throws {
+    func send(agentId: String, text: String, idempotencyKey: String) async throws {
         let env = try await connection.request(
             method: "chat.send",
-            params: ["sessionKey": sessionId, "message": text,
+            params: ["sessionKey": Self.sessionKey(forAgent: agentId),
+                     "agentId": agentId, "message": text,
                      "idempotencyKey": idempotencyKey])
         if env.ok == false { throw GatewayError.badStatus(0) }
     }
@@ -250,11 +267,24 @@ struct InboundEnvelope: Decodable {
         var state: String?
         var deltaText: String?
         var sessionKey: String?
+        var agentId: String?          // which agent this event belongs to (routing)
+        // agents.list result
+        var agents: [AgentSummary]?
+        var defaultId: String?
 
         struct AuthBody: Decodable {
             var scopes: [String]?
             var deviceToken: String?
         }
+    }
+
+    /// The agent an inbound broadcast belongs to, for per-agent routing.
+    var broadcastAgentId: String? { payload?.agentId }
+
+    /// True when this event belongs to `agentId` (nil = accept all agents).
+    func matchesAgent(_ agentId: String?) -> Bool {
+        guard let agentId else { return true }
+        return broadcastAgentId == agentId
     }
 
     /// Challenge nonce: `payload.nonce ?? params.nonce ?? nonce` (probe-verified fallbacks).
