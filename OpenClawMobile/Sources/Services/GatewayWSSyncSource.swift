@@ -74,6 +74,18 @@ struct GatewayWSSyncSource: SyncSource {
         return env.payload?.agents ?? []
     }
 
+    /// Reads the agent's behavior file (AGENTS.md) directly — operator.read, no main
+    /// needed. Returns nil if the agent has no readable instructions file.
+    func loadInstructions(agentId: String) async throws -> String? {
+        let list = try await connection.request(method: "agents.files.list",
+                                                params: ["agentId": agentId])
+        let names = (list.payload?.files ?? []).compactMap(\.name)
+        guard let fileName = AgentProfile.instructionsFile(from: names) else { return nil }
+        let got = try await connection.request(method: "agents.files.get",
+                                               params: ["agentId": agentId, "name": fileName])
+        return got.payload?.file?.content
+    }
+
     func loadHistory(agentId: String) async throws -> [ChatMessage] {
         let env = try await connection.request(
             method: "chat.history",
@@ -299,6 +311,11 @@ struct InboundEnvelope: Decodable {
         // agents.list result
         var agents: [AgentSummary]?
         var defaultId: String?
+        // agents.files.list / .get result
+        var files: [FileEntry]?
+        var file: FileEntry?
+
+        struct FileEntry: Decodable { var name: String?; var content: String? }
 
         struct AuthBody: Decodable {
             var scopes: [String]?

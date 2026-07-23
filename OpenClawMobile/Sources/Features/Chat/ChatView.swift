@@ -3,11 +3,13 @@ import SwiftUI
 struct ChatView: View {
     @State private var vm: ChatViewModel
     private let agent: AgentSummary
+    private let app: AppModel
     private let isConfigured: Bool
 
     /// One thread for one agent, sharing the app-wide connection.
     init(agent: AgentSummary, app: AppModel) {
         self.agent = agent
+        self.app = app
         self.isConfigured = app.settings.isConfigured
         _vm = State(initialValue: ChatViewModel(agent: agent, sync: app.sync, settings: app.settings))
     }
@@ -22,15 +24,20 @@ struct ChatView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                VStack(spacing: 1) {
-                    HStack(spacing: 6) {
-                        Text(agent.emoji ?? "🖥")
-                        Text(agent.displayName)
-                            .font(.system(.headline, design: .monospaced))
-                            .foregroundStyle(Theme.textPrimary)
+                NavigationLink(value: ProfileRoute(agent: agent)) {
+                    VStack(spacing: 1) {
+                        HStack(spacing: 6) {
+                            Text(agent.emoji ?? "🖥")
+                            Text(agent.displayName)
+                                .font(.system(.headline, design: .monospaced))
+                                .foregroundStyle(Theme.textPrimary)
+                            Image(systemName: "chevron.right")
+                                .font(.caption2).foregroundStyle(Theme.textSecondary)
+                        }
+                        ActivityLine(activity: vm.activity)
                     }
-                    ActivityLine(activity: vm.activity)
                 }
+                .buttonStyle(.plain)
             }
         }
         .toolbarBackground(Theme.bgPrimary, for: .navigationBar)

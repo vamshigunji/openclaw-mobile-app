@@ -7,7 +7,7 @@ struct AgentsListView: View {
     @State private var roster: AgentRosterViewModel
     @State private var showSettings = false
     @State private var showCreate = false
-    @State private var path: [AgentSummary] = []
+    @State private var path = NavigationPath()
 
     init(app: AppModel) {
         self.app = app
@@ -39,6 +39,9 @@ struct AgentsListView: View {
             .navigationDestination(for: AgentSummary.self) { agent in
                 ChatView(agent: agent, app: app)
             }
+            .navigationDestination(for: ProfileRoute.self) { route in
+                AgentProfileView(agent: route.agent, app: app)
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button { showSettings = true } label: {
@@ -65,7 +68,7 @@ struct AgentsListView: View {
                     if !roster.agents.contains(where: { $0.id == created.id }) {
                         roster.agents.append(created)
                     }
-                    path = [created]
+                    path.append(created)
                 }
             }
         }
@@ -75,9 +78,14 @@ struct AgentsListView: View {
             let args = ProcessInfo.processInfo.arguments
             // QA: auto-open the first agent's thread for a live round-trip test.
             if args.contains("--seed-demo"), let first = roster.agents.first, path.isEmpty {
-                path = [first]
+                path.append(first)
             }
             if args.contains("--open-create") { showCreate = true }
+            // QA: open a named agent's profile, e.g. --open-profile indian-timer
+            if let i = args.firstIndex(of: "--open-profile"), i + 1 < args.count,
+               let a = roster.agents.first(where: { $0.id == args[i + 1] }), path.isEmpty {
+                path.append(a); path.append(ProfileRoute(agent: a))
+            }
             #endif
         }
     }
