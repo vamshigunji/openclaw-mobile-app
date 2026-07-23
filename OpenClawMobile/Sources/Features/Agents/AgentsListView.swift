@@ -6,6 +6,7 @@ struct AgentsListView: View {
     @Bindable var app: AppModel
     @State private var roster: AgentRosterViewModel
     @State private var showSettings = false
+    @State private var showCreate = false
     @State private var path: [AgentSummary] = []
 
     init(app: AppModel) {
@@ -39,24 +40,44 @@ struct AgentsListView: View {
                 ChatView(agent: agent, app: app)
             }
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button { showSettings = true } label: {
                         Image(systemName: "gearshape").foregroundStyle(Theme.textSecondary)
                     }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showCreate = true } label: {
+                        Image(systemName: "plus").font(.body.weight(.semibold))
+                            .foregroundStyle(Theme.accent)
+                    }
+                    .accessibilityLabel("New agent")
                 }
             }
             .refreshable { await roster.load() }
         }
         .tint(Theme.accent)
         .sheet(isPresented: $showSettings) { SettingsView(settings: app.settings) }
+        .sheet(isPresented: $showCreate) {
+            CreateAgentView(app: app) { created in
+                // Refresh the roster, then open the new agent's thread.
+                Task {
+                    await roster.load()
+                    if !roster.agents.contains(where: { $0.id == created.id }) {
+                        roster.agents.append(created)
+                    }
+                    path = [created]
+                }
+            }
+        }
         .task {
             await roster.load()
             #if DEBUG
+            let args = ProcessInfo.processInfo.arguments
             // QA: auto-open the first agent's thread for a live round-trip test.
-            if ProcessInfo.processInfo.arguments.contains("--seed-demo"),
-               let first = roster.agents.first, path.isEmpty {
+            if args.contains("--seed-demo"), let first = roster.agents.first, path.isEmpty {
                 path = [first]
             }
+            if args.contains("--open-create") { showCreate = true }
             #endif
         }
     }
