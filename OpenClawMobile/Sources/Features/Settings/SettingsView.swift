@@ -108,29 +108,23 @@ struct SettingsView: View {
 
     @ViewBuilder
     private func failedView(_ reason: PairingFlow.FailureReason) -> some View {
+        pairBadge(reason.headline,
+                  color: reason == .cameraDenied ? AgentStatus.waiting.color : AgentStatus.failed.color)
+        infoCard(title: reason.headline, body: reason.recovery)
         switch reason {
         case .expiredCode:
-            pairBadge("Code expired", color: AgentStatus.failed.color)
-            infoCard(title: "Setup codes only live a few minutes.",
-                     body: "Generate a fresh one on your gateway with `openclaw qr`, then scan it — takes under 10 seconds.")
             PrimaryButton(title: "▣  Scan New Code") { flow.reset(); showScanner = true }
         case .timeout:
-            pairBadge("Approval timed out", color: AgentStatus.failed.color)
-            infoCard(title: "The approval didn't arrive in time.",
-                     body: "Approve on the gateway, then retry:")
             codeBlock("openclaw devices approve \(flow.lastRequestId ?? "--latest")")
             PrimaryButton(title: "Retry") { startPairing(with: setupCode) }
         case .cameraDenied:
-            pairBadge("Camera unavailable", color: AgentStatus.waiting.color)
-            infoCard(title: "No camera access.",
-                     body: "Paste the setup code below instead — same result. (Enable camera access in iOS Settings to scan.)")
             MonoField(label: "Paste Setup Code", placeholder: "eyJ1cmwiOiJ3c3M6…", text: $setupCode)
             PrimaryButton(title: "Pair Device", secondary: true, disabled: SetupCode.parse(setupCode) == nil) {
                 startPairing(with: setupCode)
             }
-        case .other(let message):
-            pairBadge("Pairing failed", color: AgentStatus.failed.color)
-            infoCard(title: "Something went wrong.", body: message)
+        case .badHost:
+            PrimaryButton(title: "▣  Scan a Fresh Code") { flow.reset(); showScanner = true }
+        case .unreachable, .other:
             PrimaryButton(title: "Retry") { startPairing(with: setupCode) }
         }
     }
@@ -334,10 +328,8 @@ struct SettingsView: View {
         case .connecting: "Connecting to gateway"
         case .waitingApproval: "Waiting for approval on your gateway"
         case .paired: "Paired. This phone now has its own device key."
-        case .failed(.expiredCode): "Setup code expired. Scan a new code."
-        case .failed(.timeout): "Approval timed out."
-        case .failed(.cameraDenied): "Camera unavailable. Paste the setup code instead."
-        case .failed(.other(let m)): "Pairing failed. \(m)"
+        // One source of truth for failure copy — VoiceOver says what the screen says.
+        case .failed(let reason): "\(reason.headline). \(reason.recovery)"
         default: nil
         }
         if let message { UIAccessibility.post(notification: .announcement, argument: message) }

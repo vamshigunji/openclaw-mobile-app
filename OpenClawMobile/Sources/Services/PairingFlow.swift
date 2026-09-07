@@ -51,9 +51,64 @@ final class PairingFlow {
 
     enum FailureReason: Equatable {
         case expiredCode
+        /// The URL does not resolve — a typo, or a tunnel that no longer exists.
+        case badHost
+        /// The URL is fine but nothing answered — gateway down, or the tunnel is closed.
+        case unreachable
         case timeout
         case cameraDenied
         case other(String)
+
+        /// What went wrong, in four words.
+        var headline: String {
+            switch self {
+            case .expiredCode:  "Code expired"
+            case .badHost:      "Can't find that gateway"
+            case .unreachable:  "Gateway didn't answer"
+            case .timeout:      "Approval timed out"
+            case .cameraDenied: "Camera unavailable"
+            case .other:        "Pairing failed"
+            }
+        }
+
+        /// What to do about it. Never an error code — the user cannot act on one.
+        var recovery: String {
+            switch self {
+            case .expiredCode:
+                "Setup codes last a few minutes. Generate a fresh one on your gateway with `openclaw qr` and scan it again."
+            case .badHost:
+                "Check the address in the setup code. A Quick Tunnel URL changes every time the tunnel restarts, so an old code points nowhere."
+            case .unreachable:
+                "The address looks right but nothing answered. Make sure the gateway is running and its tunnel is up, then try again."
+            case .timeout:
+                "Nobody approved this device in time. Approve it on the gateway, then retry."
+            case .cameraDenied:
+                "Paste the setup code instead — same result. To scan, open iOS Settings and allow camera access."
+            case .other(let message):
+                "Something unexpected went wrong. Check the gateway is running, then try again. Details: \(message)"
+            }
+        }
+
+        /// Map a thrown error onto the reason whose recovery text actually helps.
+        static func from(_ error: Error) -> FailureReason {
+            if let gateway = error as? GatewayError {
+                switch gateway {
+                case .bootstrapExpired: return .expiredCode
+                case .unreachable(let detail):
+                    return detail.localizedCaseInsensitiveContains("bad host") ? .badHost : .unreachable
+                default: break
+                }
+            }
+            if let url = error as? URLError {
+                switch url.code {
+                case .cannotFindHost, .unsupportedURL, .badURL: return .badHost
+                case .cannotConnectToHost, .timedOut, .networkConnectionLost,
+                     .notConnectedToInternet, .secureConnectionFailed: return .unreachable
+                default: break
+                }
+            }
+            return .other((error as? LocalizedError)?.errorDescription ?? "\(error)")
+        }
     }
 
     enum RunResult: Equatable {
@@ -118,8 +173,9 @@ final class PairingFlow {
                 step = .failed(.expiredCode)
                 return .failed
             } catch {
-                let msg = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-                step = .failed(.other(msg))
+                // Route through the mapper so a dead tunnel reads as "gateway didn't answer",
+                // not as a raw URLError the user cannot act on.
+                step = .failed(.from(error))
                 return .failed
             }
         }

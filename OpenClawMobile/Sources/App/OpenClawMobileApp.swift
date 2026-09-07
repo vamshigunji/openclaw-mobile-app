@@ -3,6 +3,7 @@ import SwiftUI
 @main
 struct OpenClawMobileApp: App {
     @State private var app: AppModel
+    @State private var showFirstRun: Bool
 
     init() {
         let settings = SettingsStore()
@@ -18,12 +19,32 @@ struct OpenClawMobileApp: App {
         }
         #endif
         _app = State(initialValue: AppModel(settings: settings))
+        var gate = FirstRunGate(isConfigured: settings.isConfigured)
+        #if DEBUG
+        // QA hooks drive specific screens; never park them on the explainer.
+        let args = ProcessInfo.processInfo.arguments
+        if args.contains("--skip-first-run") || args.contains("--seed-demo")
+            || args.contains("--open-settings") || args.contains("--open-create")
+            || args.contains("--open-board") || args.contains("--open-profile") {
+            gate.markSeen()
+        }
+        #endif
+        _showFirstRun = State(initialValue: gate.shouldShow)
     }
 
     var body: some Scene {
         WindowGroup {
-            RootTabView(app: app)
-                .preferredColorScheme(.dark)
+            Group {
+                if showFirstRun {
+                    FirstRunView {
+                        FirstRunGate(isConfigured: app.settings.isConfigured).markSeen()
+                        showFirstRun = false
+                    }
+                } else {
+                    RootTabView(app: app)
+                }
+            }
+            .preferredColorScheme(.dark)
         }
     }
 }
