@@ -90,6 +90,13 @@ cannot start without a live gateway. Two things are needed:
    `v1-probe-2026-09-07`, send it a 1-pixel PNG, archive and unarchive it, abort its run,
    and cancel a task. The session stays archived on the gateway afterwards.
 
+**Host search exhausted (2026-09-07).** Before declaring the block I checked: git history
+across all branches, the simulator app's stored `gateway.host` (empty), `.docs/`, `designs/`,
+`tools/`, and localhost:18789 (closed). The only real Quick Tunnel URL anywhere is
+`wss://certificates-geography-arising-von.trycloudflare.com` from July; probing it returns
+`ws error` — Quick Tunnel URLs are regenerated on every restart, so it is long dead. There is
+no host to recover; it has to come from the human.
+
 Also still open and needing a person: **P7, the two-device fan-in**, which needs a second
 paired device that does not exist yet. Cutting P7 is the human's call, not the loop's.
 
