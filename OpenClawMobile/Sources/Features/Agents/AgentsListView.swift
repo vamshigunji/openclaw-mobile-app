@@ -47,6 +47,7 @@ struct AgentsListView: View {
                     Button { showSettings = true } label: {
                         Image(systemName: "gearshape").foregroundStyle(Theme.textMuted)
                     }
+                    .accessibilityLabel("Settings")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showCreate = true } label: {

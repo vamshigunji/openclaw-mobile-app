@@ -9,21 +9,6 @@ struct AttachmentPolicy: Equatable, Sendable {
     var maxPayload = 25 * 1024 * 1024      // the whole encoded frame
 
     static let `default` = AttachmentPolicy()
-
-    /// Reads `policy.attachments.{maxBytes,maxImageBytes}` and `policy.maxPayload` from a
-    /// hello-ok frame (or its bare payload). Missing fields keep the defaults.
-    static func from(helloOK data: Data) -> AttachmentPolicy {
-        var policy = AttachmentPolicy()
-        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return policy }
-        let payload = (root["payload"] as? [String: Any]) ?? root
-        guard let raw = payload["policy"] as? [String: Any] else { return policy }
-        if let v = raw["maxPayload"] as? Int { policy.maxPayload = v }
-        if let attachments = raw["attachments"] as? [String: Any] {
-            if let v = attachments["maxBytes"] as? Int { policy.maxBytes = v }
-            if let v = attachments["maxImageBytes"] as? Int { policy.maxImageBytes = v }
-        }
-        return policy
-    }
 }
 
 /// Something the user attached from the composer (design §4.2).

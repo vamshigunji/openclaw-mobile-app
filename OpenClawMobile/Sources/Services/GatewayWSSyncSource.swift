@@ -141,12 +141,6 @@ struct GatewayWSSyncSource: SyncSource {
         return env.payload?.runId
     }
 
-    /// Main-thread convenience (existing callers and the E2E tests).
-    func send(agentId: String, text: String, idempotencyKey: String) async throws {
-        try await send(sessionKey: Self.sessionKey(forAgent: agentId), agentId: agentId,
-                       text: text, idempotencyKey: idempotencyKey)
-    }
-
     /// `chat.abort` — stop the session's active run (operator.write).
     func abort(sessionKey: String, agentId: String, runId: String?) async throws {
         var params: [String: Any] = ["sessionKey": sessionKey, "agentId": agentId]

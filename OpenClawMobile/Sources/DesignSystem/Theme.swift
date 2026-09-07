@@ -140,6 +140,9 @@ struct PrimaryButton: View {
         Button(action: action) {
             Text(title)
                 .font(Theme.Font.body.weight(.semibold))
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .minimumScaleFactor(0.85)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
                 .foregroundStyle(outlined ? tint : .white)
@@ -190,6 +193,8 @@ struct StatusBadge: View {
             Image(systemName: status.symbol).font(.caption2)
             Text(status.label)
                 .font(Theme.Font.caption)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
                 .foregroundStyle(status.color)
         }
         .padding(.horizontal, 7)

@@ -89,21 +89,12 @@ extension SyncSource {
     func runEnds(sessionKey: String) -> AsyncStream<String> { AsyncStream { $0.finish() } }
 }
 
-/// Agent-main-thread and text-only conveniences over the session-keyed seam.
+/// Text-only send convenience over the session-keyed seam.
 extension SyncSource {
     @discardableResult
     func send(sessionKey: String, agentId: String, text: String, idempotencyKey: String) async throws -> String? {
         try await send(sessionKey: sessionKey, agentId: agentId, text: text,
                        idempotencyKey: idempotencyKey, attachments: [])
-    }
-    func loadHistory(agentId: String) async throws -> [ChatMessage] {
-        try await loadHistory(sessionKey: ChatThread.mainKey(agentId: agentId), agentId: agentId)
-    }
-    func subscribe(agentId: String?) -> AsyncThrowingStream<ChatMessage, Error> {
-        subscribe(sessionKey: agentId.map { ChatThread.mainKey(agentId: $0) })
-    }
-    func activityStream(agentId: String) -> AsyncStream<AgentActivity> {
-        activityStream(sessionKey: ChatThread.mainKey(agentId: agentId))
     }
 }
 

@@ -16,18 +16,6 @@
 
 ## Chat
 
-### Read the attachment policy from hello-ok
-
-**What:** Keep `hello-ok.policy.attachments` / `policy.maxPayload` on `GatewayConnection` and feed it to `ChatViewModel` instead of `AttachmentPolicy.default`.
-
-**Why:** A gateway configured with a smaller `agents.defaults.mediaMaxMb` would reject attachments the phone thinks fit. Today the limits are the documented defaults (20 MB / 6 MB / 25 MiB) with a `ponytail:` note.
-
-**Context:** `AttachmentPolicy.from(helloOK:)` already parses the shape (covered by `AttachmentBudgetTests`); the connection decodes hello-ok as `InboundEnvelope` and would need to retain the policy. Phase 0 of the loop captures a real `hello-ok.json` that pins the shape.
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** A live probe showing non-default limits
-
 ### Send should end an in-progress dictation
 
 **What:** `ChatViewModel.send()` stops an active dictation (finishing it into the draft) before sending; today only the mic tap ends it.
@@ -55,3 +43,11 @@
 **Depends on:** Stable tunnel URL (B milestone `devicetrust setup` CLI makes this trivial)
 
 ## Completed
+
+### Read the attachment policy from hello-ok
+
+**What:** Keep `hello-ok.policy.attachments` / `policy.maxPayload` on `GatewayConnection` and feed it to `ChatViewModel` instead of `AttachmentPolicy.default`.
+
+**Why:** A gateway configured with a smaller `agents.defaults.mediaMaxMb` would reject attachments the phone thinks fit.
+
+**Completed:** v0.2.0.0 (2026-09-07) — `GatewayConnection` retains the advertised policy; `ChatViewModel` replaces its defaults once the handshake lands. The duplicate `AttachmentPolicy.from(helloOK:)` parser was deleted in favour of the envelope the app already decodes.

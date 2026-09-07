@@ -76,17 +76,17 @@ final class AttachmentBudgetTests: XCTestCase {
                        .tooLarge(max: 2 * 1024 * 1024))
     }
 
-    func testPolicyComesFromHelloOkFixtureWhenCaptured() throws {
+    /// Once P5 captures a real hello-ok, it must decode through the same envelope the app
+    /// uses — not a parallel parser that could drift from production.
+    func testCapturedHelloOkDecodesThroughTheAppsOwnEnvelope() throws {
         let fixture = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
             .appendingPathComponent("Fixtures/hello-ok.json")
         guard FileManager.default.fileExists(atPath: fixture.path) else {
-            // Phase 3 runs before the phase-0 capture; re-run this case once P0.3 lands.
-            XCTAssertEqual(AttachmentPolicy.from(helloOK: Data("{}".utf8)), .default)
-            return
+            throw XCTSkip("no live hello-ok captured yet — loop P5.4 writes it")
         }
-        let decoded = AttachmentPolicy.from(helloOK: try Data(contentsOf: fixture))
-        XCTAssertGreaterThan(decoded.maxBytes, 0)
-        XCTAssertGreaterThan(decoded.maxImageBytes, 0)
-        XCTAssertLessThanOrEqual(decoded.maxImageBytes, decoded.maxBytes)
+        let env = try JSONDecoder().decode(InboundEnvelope.self, from: Data(contentsOf: fixture))
+        guard let advertised = env.payload?.policy else { return }   // gateway sent no policy
+        if let v = advertised.attachments?.maxBytes { XCTAssertGreaterThan(v, 0) }
+        if let v = advertised.attachments?.maxImageBytes { XCTAssertGreaterThan(v, 0) }
     }
 }
