@@ -1,50 +1,85 @@
 import SwiftUI
 
-/// OpenClaw Design Language (PRD §4). Dark mode only for v1.
+/// OpenClaw design tokens — the official palette (designs/2026-09-06-dev-suite-design.md §3.1,
+/// sourced from openclaw/openclaw `docs/docs.json` + `ui/src/styles/base.css`). Dark only.
+/// The ONLY home for color and radius values in the app (DesignSystemTests pins it).
 enum Theme {
-    // Backgrounds
-    static let bgPrimary   = Color(hex: 0x0E0F12)
-    static let bgSecondary = Color(hex: 0x1E2026)
+    // Surfaces
+    static let bg       = Color(hex: 0x0E1015)   // screens, lists, board columns
+    static let card     = Color(hex: 0x161920)   // cards, agent bubbles, fields
+    static let elevated = Color(hex: 0x191C24)   // sheets, composer, headers
 
-    // Accent
-    static let accent      = Color(hex: 0x22C55E) // terminal green
+    // Lines — 1 px hairlines, never shadows
+    static let borderColor  = Color(hex: 0x1E2028)
+    static let borderStrong = Color(hex: 0x2E3040)  // focused / emphasized
 
     // Text
-    static let textPrimary   = Color(hex: 0xE5E7EB)
-    static let textSecondary = Color(hex: 0x9CA3AF)
+    static let text      = Color(hex: 0xF4F4F5)   // titles, names, input
+    static let textBody  = Color(hex: 0xBCBCC0)   // message bodies
+    static let textMuted = Color(hex: 0x8B8B94)   // captions, labels
+
+    // Accents
+    static let accent       = Color(hex: 0xFF5C5C)   // lobster red — tint, links, live dot
+    static let accentSubtle = accent.opacity(0.10)   // user bubble fill, selected chips
+    static let brand        = Color(hex: 0xD84A31)   // primary CTA fill, white text
+    static let teal         = Color(hex: 0x14B8A6)   // running / activity
+    static let ok     = Color(hex: 0x22C55E)
+    static let warn   = Color(hex: 0xF59E0B)
+    static let danger = Color(hex: 0xF87171)
 
     // Bubbles
-    static let userBubble  = Color(hex: 0x14351F)   // dark green tint, green border on top
-    static let agentBubble = Color(hex: 0x1E2026)   // near-black/gray
+    static let userBubble  = accentSubtle
+    static let agentBubble = card
 
-    // Geometry — strict 4px, 1px borders, no shadows
-    static let radius: CGFloat = 4
+    // Geometry — 6 pt controls/chips/fields, 10 pt cards/bubbles/sheets, 1 px borders
+    static let radius: CGFloat = 6
+    static let radiusCard: CGFloat = 10
     static let border: CGFloat = 1
-    static let borderColor = Color(hex: 0x2A2D34)
+
+    /// Type roles: system type for UI, mono only for code, paths, ids, keys, logs.
+    enum Font {
+        static let title: SwiftUI.Font = .system(.headline, weight: .semibold)
+        static let body: SwiftUI.Font = .body
+        static let caption: SwiftUI.Font = .caption
+        static let label: SwiftUI.Font = .system(.caption2, weight: .medium)     // field labels, chips
+        static let heading: SwiftUI.Font = .system(.title3, weight: .semibold)    // screen headers
+        static let mono: SwiftUI.Font = .system(.body, design: .monospaced)
+        static let monoCaption: SwiftUI.Font = .system(.caption, design: .monospaced)
+    }
 }
 
-/// Status → color mapping (PRD §4).
+/// Status → color + SF Symbol. Single source of truth; status is never color alone.
 enum AgentStatus: String, Codable, CaseIterable {
     case working, waiting, blocked, failed, done, idle
 
     var color: Color {
         switch self {
-        case .working: return Color(hex: 0x22C55E)
-        case .waiting: return Color(hex: 0xF59E0B)
-        case .blocked: return Color(hex: 0xA855F7)
-        case .failed:  return Color(hex: 0xEF4444)
-        case .done, .idle: return Color(hex: 0x6B7280)
+        case .working:           Theme.teal
+        case .waiting, .blocked: Theme.warn
+        case .failed:            Theme.danger
+        case .done, .idle:       Theme.textMuted
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .working: "bolt.fill"
+        case .waiting: "hand.raised.fill"
+        case .blocked: "lock.fill"
+        case .failed:  "xmark.octagon.fill"
+        case .done:    "checkmark.circle.fill"
+        case .idle:    "moon.zzz.fill"
         }
     }
 
     var label: String {
         switch self {
-        case .working: return "Working"
-        case .waiting: return "Waiting on You"
-        case .blocked: return "Blocked"
-        case .failed:  return "Failed"
-        case .done:    return "Done"
-        case .idle:    return "Idle"
+        case .working: "Working"
+        case .waiting: "Waiting on you"
+        case .blocked: "Blocked"
+        case .failed:  "Failed"
+        case .done:    "Done"
+        case .idle:    "Idle"
         }
     }
 }
@@ -68,9 +103,9 @@ struct MonoField: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(label.uppercased())
-                .font(.system(.caption2, design: .monospaced))
-                .foregroundStyle(Theme.textSecondary)
+            Text(label)
+                .font(Theme.Font.label)
+                .foregroundStyle(Theme.textMuted)
             Group {
                 if secure {
                     SecureField(placeholder, text: $text)
@@ -80,32 +115,37 @@ struct MonoField: View {
                         .autocorrectionDisabled()
                 }
             }
-            .font(.system(.body, design: .monospaced))
-            .foregroundStyle(Theme.textPrimary)
+            .font(Theme.Font.mono)
+            .foregroundStyle(Theme.text)
             .padding(10)
-            .background(Theme.bgSecondary)
+            .background(Theme.card)
             .overlay(RoundedRectangle(cornerRadius: Theme.radius).stroke(Theme.borderColor, lineWidth: Theme.border))
         }
     }
 }
 
-/// Solid accent CTA (≥44pt tall). `secondary` gives the outlined variant.
+/// Primary CTA: brand fill with white text (≥44pt tall). `secondary` = accent outline,
+/// `destructive` = danger outline.
 struct PrimaryButton: View {
     let title: String
     var secondary = false
+    var destructive = false
     var disabled = false
     let action: () -> Void
+
+    private var tint: Color { destructive ? Theme.danger : Theme.accent }
+    private var outlined: Bool { secondary || destructive }
 
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.system(.body, design: .monospaced).weight(.semibold))
+                .font(Theme.Font.body.weight(.semibold))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
-                .foregroundStyle(secondary ? Theme.accent : Theme.bgPrimary)
-                .background(secondary ? Color.clear : Theme.accent)
-                .overlay(secondary
-                    ? RoundedRectangle(cornerRadius: Theme.radius).stroke(Theme.accent, lineWidth: Theme.border)
+                .foregroundStyle(outlined ? tint : .white)
+                .background(outlined ? Color.clear : Theme.brand)
+                .overlay(outlined
+                    ? RoundedRectangle(cornerRadius: Theme.radius).stroke(tint, lineWidth: Theme.border)
                     : nil)
                 .clipShape(RoundedRectangle(cornerRadius: Theme.radius))
         }
@@ -129,12 +169,12 @@ struct ActivityLine: View {
                     .opacity(pulse ? 0.3 : 1)
                     .animation(.easeInOut(duration: 0.7).repeatForever(autoreverses: true), value: pulse)
                 Text(label)
-                    .font(.system(.caption2, design: .monospaced))
+                    .font(Theme.Font.caption)
                     .foregroundStyle(Theme.accent)
             } else {
                 Text("Idle")
-                    .font(.system(.caption2, design: .monospaced))
-                    .foregroundStyle(Theme.textSecondary)
+                    .font(Theme.Font.caption)
+                    .foregroundStyle(Theme.textMuted)
             }
         }
         .onAppear { pulse = true }
@@ -147,9 +187,9 @@ struct StatusBadge: View {
     let status: AgentStatus
     var body: some View {
         HStack(spacing: 5) {
-            Circle().fill(status.color).frame(width: 7, height: 7)
+            Image(systemName: status.symbol).font(.caption2)
             Text(status.label)
-                .font(.system(.caption2, design: .monospaced))
+                .font(Theme.Font.caption)
                 .foregroundStyle(status.color)
         }
         .padding(.horizontal, 7)

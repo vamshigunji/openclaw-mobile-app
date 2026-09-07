@@ -31,7 +31,10 @@ targets:
         # (eng review 2026-07-21, issue 2B — never ship ArbitraryLoads in a trust product)
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
-        NSCameraUsageDescription: "Scan the QR setup code from your gateway to pair this device."
+        NSCameraUsageDescription: "Take a photo to send to your agent, or scan the QR setup code from your gateway."
+        NSPhotoLibraryUsageDescription: "Attach photos and screenshots to messages for your agents."
+        NSMicrophoneUsageDescription: "Dictate messages to your agents with the microphone."
+        NSSpeechRecognitionUsageDescription: "Turn your dictation into message text on this device."
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.openclaw.mobile

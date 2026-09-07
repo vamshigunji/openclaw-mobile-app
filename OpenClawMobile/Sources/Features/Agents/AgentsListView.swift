@@ -26,14 +26,14 @@ struct AgentsListView: View {
                         if !app.settings.isConfigured { demoBanner.listRowSeparator(.hidden) }
                         ForEach(roster.agents) { agent in
                             NavigationLink(value: agent) { AgentRow(agent: agent) }
-                                .listRowBackground(Theme.bgPrimary)
+                                .listRowBackground(Theme.bg)
                         }
                     }
                     .listStyle(.plain)
                     .scrollContentBackground(.hidden)
                 }
             }
-            .background(Theme.bgPrimary.ignoresSafeArea())
+            .background(Theme.bg.ignoresSafeArea())
             .navigationTitle("Agents")
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: AgentSummary.self) { agent in
@@ -45,7 +45,7 @@ struct AgentsListView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button { showSettings = true } label: {
-                        Image(systemName: "gearshape").foregroundStyle(Theme.textSecondary)
+                        Image(systemName: "gearshape").foregroundStyle(Theme.textMuted)
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -81,6 +81,7 @@ struct AgentsListView: View {
                 path.append(first)
             }
             if args.contains("--open-create") { showCreate = true }
+            if args.contains("--open-settings") { showSettings = true }
             // QA: open a named agent's profile, e.g. --open-profile indian-timer
             if let i = args.firstIndex(of: "--open-profile"), i + 1 < args.count,
                let a = roster.agents.first(where: { $0.id == args[i + 1] }), path.isEmpty {
@@ -92,14 +93,14 @@ struct AgentsListView: View {
 
     private var demoBanner: some View {
         HStack(spacing: 8) {
-            Circle().fill(AgentStatus.waiting.color).frame(width: 7, height: 7)
-            Text("Demo agents — pair your gateway in Settings for the real roster")
-                .font(.system(.caption, design: .monospaced))
+            Image(systemName: AgentStatus.waiting.symbol).font(Theme.Font.caption)
+            Text("Demo agents. Pair your gateway in Settings for the real roster.")
+                .font(Theme.Font.caption)
                 .foregroundStyle(AgentStatus.waiting.color)
             Spacer()
         }
         .padding(.vertical, 4)
-        .listRowBackground(Theme.bgPrimary)
+        .listRowBackground(Theme.bg)
     }
 }
 
@@ -110,21 +111,21 @@ struct AgentRow: View {
         HStack(spacing: 12) {
             ZStack {
                 RoundedRectangle(cornerRadius: Theme.radius)
-                    .fill(Theme.bgSecondary)
+                    .fill(Theme.accentSubtle)
                     .overlay(RoundedRectangle(cornerRadius: Theme.radius)
-                        .stroke(Theme.borderColor, lineWidth: Theme.border))
+                        .stroke(Theme.accent.opacity(0.35), lineWidth: Theme.border))
                     .frame(width: 40, height: 40)
                 Text(agent.emoji ?? "🖥")
                     .font(.system(size: 20))
             }
             VStack(alignment: .leading, spacing: 3) {
                 Text(agent.displayName)
-                    .font(.system(.body, design: .monospaced).weight(.semibold))
-                    .foregroundStyle(Theme.textPrimary)
+                    .font(Theme.Font.body.weight(.semibold))
+                    .foregroundStyle(Theme.text)
                 if let sub = subtitle {
                     Text(sub)
-                        .font(.system(.caption2, design: .monospaced))
-                        .foregroundStyle(Theme.textSecondary)
+                        .font(Theme.Font.monoCaption)
+                        .foregroundStyle(Theme.textMuted)
                         .lineLimit(1)
                 }
             }

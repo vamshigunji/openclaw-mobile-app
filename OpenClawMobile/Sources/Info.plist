@@ -26,7 +26,13 @@
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Scan the QR setup code from your gateway to pair this device.</string>
+	<string>Take a photo to send to your agent, or scan the QR setup code from your gateway.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Dictate messages to your agents with the microphone.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Attach photos and screenshots to messages for your agents.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Turn your dictation into message text on this device.</string>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>

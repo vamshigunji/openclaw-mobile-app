@@ -36,14 +36,14 @@ final class AgentProfileViewModel {
     var canEdit: Bool { isConfigured }
 
     func saveEdit(_ req: EditAgentRequest) async {
-        guard isConfigured, let ws = sync as? GatewayWSSyncSource else {
+        guard isConfigured else {
             edit = .failed("Editing needs a paired gateway.")
             return
         }
         edit = .saving
         let beforeInstructions = instructions
         let outcome = await MainAgentTask.run(
-            ws, instruction: req.instruction,
+            sync, instruction: req.instruction,
             idempotencyKey: "edit-agent-\(UUID().uuidString)") { [sync, agent, req] () async -> (AgentSummary?, String?)? in
             let after = (try? await sync.listAgents()) ?? []
             let newInstructions = try? await sync.loadInstructions(agentId: agent.id)
@@ -63,12 +63,12 @@ final class AgentProfileViewModel {
     }
 
     func delete() async -> Bool {
-        guard isConfigured, let ws = sync as? GatewayWSSyncSource else { return false }
+        guard isConfigured else { return false }
         edit = .saving
         let text = "DELETE-AGENT REQUEST (from the profile editor). Delete agent \(agent.id) "
             + "with agents.delete, then confirm it is gone from agents.list. Reply DELETED \(agent.id)."
         let outcome = await MainAgentTask.run(
-            ws, instruction: text, idempotencyKey: "delete-agent-\(UUID().uuidString)") { [sync, agent] in
+            sync, instruction: text, idempotencyKey: "delete-agent-\(UUID().uuidString)") { [sync, agent] in
             let after = (try? await sync.listAgents()) ?? []
             return after.contains(where: { $0.id == agent.id }) ? nil : true
         }

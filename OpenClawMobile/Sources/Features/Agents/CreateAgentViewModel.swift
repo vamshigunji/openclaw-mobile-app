@@ -39,7 +39,7 @@ final class CreateAgentViewModel {
 
         // Demo mode: no gateway to ask — add the agent client-side so the flow is
         // demoable. It won't persist on any gateway.
-        guard isConfigured, let ws = sync as? GatewayWSSyncSource else {
+        guard isConfigured else {
             let demo = AgentSummary(id: req.normalizedId,
                                     name: req.name.trimmingCharacters(in: .whitespaces),
                                     emoji: req.emoji.isEmpty ? "✨" : req.emoji,
@@ -51,7 +51,7 @@ final class CreateAgentViewModel {
         phase = .asking
         let before = Set((try? await sync.listAgents())?.map(\.id) ?? [])
         let outcome = await MainAgentTask.run(
-            ws, instruction: req.instruction,
+            sync, instruction: req.instruction,
             idempotencyKey: "create-agent-\(UUID().uuidString)",
             onPoll: { self.elapsed = $0 }) { [sync, req] () async -> AgentSummary? in
             guard let after = try? await sync.listAgents() else { return nil }

@@ -66,7 +66,7 @@ struct GatewayWSSyncSource: SyncSource {
     /// LIVE-verified 2026-07-22: texting agent `<id>` needs the FULL canonical
     /// session key `agent:<id>:main` WITH a matching `agentId`. A bare key + a
     /// separate agentId is rejected ("agentId does not match session key").
-    static func sessionKey(forAgent id: String) -> String { "agent:\(id):main" }
+    static func sessionKey(forAgent id: String) -> String { ChatThread.mainKey(agentId: id) }
 
     func listAgents() async throws -> [AgentSummary] {
         let env = try await connection.request(method: "agents.list", params: [String: Any]())
@@ -86,10 +86,10 @@ struct GatewayWSSyncSource: SyncSource {
         return got.payload?.file?.content
     }
 
-    func loadHistory(agentId: String) async throws -> [ChatMessage] {
+    func loadHistory(sessionKey: String, agentId: String) async throws -> [ChatMessage] {
         let env = try await connection.request(
             method: "chat.history",
-            params: ["sessionKey": Self.sessionKey(forAgent: agentId),
+            params: ["sessionKey": sessionKey,
                      "agentId": agentId, "limit": 200])
         if env.ok == false { throw GatewayError.badStatus(0) }
         return (env.payload?.messages ?? []).compactMap { $0.asChatMessage }
@@ -97,7 +97,7 @@ struct GatewayWSSyncSource: SyncSource {
 
     /// Subscribes once connection-wide, then filters the shared stream to this
     /// agent so each thread only sees its own turns (multi-agent routing).
-    func subscribe(agentId: String?) -> AsyncThrowingStream<ChatMessage, Error> {
+    func subscribe(sessionKey: String?) -> AsyncThrowingStream<ChatMessage, Error> {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
@@ -111,7 +111,7 @@ struct GatewayWSSyncSource: SyncSource {
                     // resubscribes internally) — no error surfaces on a drop.
                     for await env in events {
                         if Task.isCancelled { break }
-                        guard env.matchesAgent(agentId) else { continue }
+                        guard env.matchesSession(sessionKey) else { continue }
                         if let msg = env.broadcastMessage { continuation.yield(msg) }
                     }
                     continuation.finish()
@@ -128,12 +128,28 @@ struct GatewayWSSyncSource: SyncSource {
     /// Path-A write-of-record. `idempotencyKey` makes a resend-on-reconnect safe and
     /// lets every device (including the sender) reconcile the broadcast echo against
     /// its optimistic bubble.
+    @discardableResult
+    func send(sessionKey: String, agentId: String, text: String, idempotencyKey: String,
+              attachments: [Attachment]) async throws -> String? {
+        var params: [String: Any] = ["sessionKey": sessionKey, "agentId": agentId,
+                                     "message": text, "idempotencyKey": idempotencyKey]
+        if !attachments.isEmpty { params["attachments"] = attachments.map(\.wireParams) }
+        let env = try await connection.request(method: "chat.send", params: params)
+        if env.ok == false { throw GatewayError.badStatus(0) }
+        return env.payload?.runId
+    }
+
+    /// Main-thread convenience (existing callers and the E2E tests).
     func send(agentId: String, text: String, idempotencyKey: String) async throws {
-        let env = try await connection.request(
-            method: "chat.send",
-            params: ["sessionKey": Self.sessionKey(forAgent: agentId),
-                     "agentId": agentId, "message": text,
-                     "idempotencyKey": idempotencyKey])
+        try await send(sessionKey: Self.sessionKey(forAgent: agentId), agentId: agentId,
+                       text: text, idempotencyKey: idempotencyKey)
+    }
+
+    /// `chat.abort` — stop the session's active run (operator.write).
+    func abort(sessionKey: String, agentId: String, runId: String?) async throws {
+        var params: [String: Any] = ["sessionKey": sessionKey, "agentId": agentId]
+        if let runId { params["runId"] = runId }
+        let env = try await connection.request(method: "chat.abort", params: params)
         if env.ok == false { throw GatewayError.badStatus(0) }
     }
 
@@ -142,15 +158,30 @@ struct GatewayWSSyncSource: SyncSource {
     /// Maps the shared event stream to this agent's live activity (Thinking /
     /// Searching the web / Running a command …). Reads the same connection events
     /// as `subscribe`; the message subscription already sent `sessions.subscribe`.
-    func activityStream(agentId: String) -> AsyncStream<AgentActivity> {
+    func activityStream(sessionKey: String) -> AsyncStream<AgentActivity> {
         AsyncStream { continuation in
             let task = Task {
                 for await env in await connection.events() {
                     if Task.isCancelled { break }
-                    guard env.matchesAgent(agentId) else { continue }
+                    guard env.matchesSession(sessionKey) else { continue }
                     if let activity = AgentActivity.from(env) {
                         continuation.yield(activity)
                     }
+                }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    /// `session.tool` frames for this session, mapped to `ToolEvent` (real names + args only).
+    func toolEvents(sessionKey: String) -> AsyncStream<ToolEvent> {
+        AsyncStream { continuation in
+            let task = Task {
+                for await env in await connection.events() {
+                    if Task.isCancelled { break }
+                    guard env.matchesSession(sessionKey), let event = ToolEvent.from(env) else { continue }
+                    continuation.yield(event)
                 }
                 continuation.finish()
             }
@@ -327,6 +358,24 @@ struct InboundEnvelope: Decodable {
         struct EventData: Decodable {
             var phase: String?   // start | end | result | error …
             var name: String?    // tool name (WebSearch, Bash, …) for session.tool
+            /// Tool args, string-valued entries only — all the timeline summary reads.
+            /// ponytail: no JSON-value enum until something needs nested args.
+            var args: [String: String]?
+
+            private enum CodingKeys: String, CodingKey { case phase, name, args }
+            private struct StringOnly: Decodable {
+                let value: String?
+                init(from decoder: Decoder) throws {
+                    value = try? decoder.singleValueContainer().decode(String.self)
+                }
+            }
+            init(from decoder: Decoder) throws {
+                let c = try decoder.container(keyedBy: CodingKeys.self)
+                phase = try c.decodeIfPresent(String.self, forKey: .phase)
+                name = try c.decodeIfPresent(String.self, forKey: .name)
+                let raw = (try? c.decodeIfPresent([String: StringOnly].self, forKey: .args)) ?? nil
+                args = raw?.compactMapValues(\.value)
+            }
         }
     }
 
@@ -340,6 +389,17 @@ struct InboundEnvelope: Decodable {
     func matchesAgent(_ agentId: String?) -> Bool {
         guard let agentId else { return true }
         return broadcastAgentId == agentId
+    }
+
+    /// True when this frame belongs to `sessionKey` (nil = accept all). Frames carry
+    /// `payload.sessionKey`; frames that only carry `agentId` (live activity events) are
+    /// attributed to that agent's MAIN thread only — a task thread never inherits
+    /// another session's traffic.
+    func matchesSession(_ sessionKey: String?) -> Bool {
+        guard let sessionKey else { return true }
+        if let key = payload?.sessionKey { return key == sessionKey }
+        guard let agentId = broadcastAgentId else { return false }
+        return sessionKey == ChatThread.mainKey(agentId: agentId)
     }
 
     /// Challenge nonce: `payload.nonce ?? params.nonce ?? nonce` (probe-verified fallbacks).

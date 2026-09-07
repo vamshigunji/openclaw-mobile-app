@@ -29,14 +29,14 @@ struct AgentProfileView: View {
                     deleteButton
                 } else {
                     Text("Editing needs a paired gateway (Settings).")
-                        .font(.system(.caption2, design: .monospaced))
-                        .foregroundStyle(Theme.textSecondary)
+                        .font(Theme.Font.caption)
+                        .foregroundStyle(Theme.textMuted)
                 }
                 Spacer(minLength: 0)
             }
             .padding(16)
         }
-        .background(Theme.bgPrimary.ignoresSafeArea())
+        .background(Theme.bg.ignoresSafeArea())
         .navigationTitle("Profile")
         .navigationBarTitleDisplayMode(.inline)
         .task { await vm.load() }
@@ -56,10 +56,10 @@ struct AgentProfileView: View {
             Text(vm.agent.emoji ?? "🖥").font(.system(size: 44))
             VStack(alignment: .leading, spacing: 4) {
                 Text(vm.agent.displayName)
-                    .font(.system(.title3, design: .monospaced).weight(.semibold))
-                    .foregroundStyle(Theme.textPrimary)
+                    .font(Theme.Font.heading)
+                    .foregroundStyle(Theme.text)
                 if let m = vm.agent.model {
-                    Text(m).font(.system(.caption, design: .monospaced))
+                    Text(m).font(Theme.Font.monoCaption)
                         .foregroundStyle(Theme.accent)
                 }
             }
@@ -73,19 +73,19 @@ struct AgentProfileView: View {
             if let w = vm.agent.workspace { row("Workspace", w) }
             if let m = vm.agent.model { row("Model", m) }
         }
-        .background(Theme.bgSecondary)
+        .background(Theme.card)
         .overlay(RoundedRectangle(cornerRadius: Theme.radius).stroke(Theme.borderColor, lineWidth: Theme.border))
     }
 
     private func row(_ label: String, _ value: String) -> some View {
         HStack(alignment: .top) {
-            Text(label.uppercased())
-                .font(.system(.caption2, design: .monospaced))
-                .foregroundStyle(Theme.textSecondary)
+            Text(label)
+                .font(Theme.Font.label)
+                .foregroundStyle(Theme.textMuted)
                 .frame(width: 92, alignment: .leading)
             Text(value)
-                .font(.system(.caption, design: .monospaced))
-                .foregroundStyle(Theme.textPrimary)
+                .font(Theme.Font.monoCaption)
+                .foregroundStyle(Theme.text)
                 .textSelection(.enabled)
             Spacer()
         }
@@ -94,18 +94,18 @@ struct AgentProfileView: View {
 
     private var instructionsSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("INSTRUCTIONS (AGENTS.md)")
-                .font(.system(.caption2, design: .monospaced))
-                .foregroundStyle(Theme.textSecondary)
+            Text("Instructions (AGENTS.md)")
+                .font(Theme.Font.label)
+                .foregroundStyle(Theme.textMuted)
             if vm.loadingInstructions {
                 ProgressView().tint(Theme.accent).padding(.vertical, 8)
             } else {
                 Text(vm.instructions ?? "No instructions file found for this agent.")
-                    .font(.system(.caption, design: .monospaced))
-                    .foregroundStyle(Theme.textPrimary)
+                    .font(Theme.Font.monoCaption)
+                    .foregroundStyle(Theme.text)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(12)
-                    .background(Theme.bgSecondary)
+                    .background(Theme.card)
                     .overlay(RoundedRectangle(cornerRadius: Theme.radius).stroke(Theme.borderColor, lineWidth: Theme.border))
                     .textSelection(.enabled)
             }
@@ -113,18 +113,10 @@ struct AgentProfileView: View {
     }
 
     private var deleteButton: some View {
-        Button(role: .destructive) {
+        PrimaryButton(title: "Delete Agent", destructive: true) {
             Task { if await vm.delete() { dismiss() } }
-        } label: {
-            Text("Delete Agent")
-                .font(.system(.body, design: .monospaced).weight(.semibold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .foregroundStyle(AgentStatus.failed.color)
-                .overlay(RoundedRectangle(cornerRadius: Theme.radius).stroke(AgentStatus.failed.color.opacity(0.5), lineWidth: Theme.border))
         }
     }
-
 }
 
 /// Edit sheet — routes changes through the main agent (approach B).
@@ -152,12 +144,12 @@ struct AgentEditView: View {
                 }
                 .padding(16)
             }
-            .background(Theme.bgPrimary.ignoresSafeArea())
+            .background(Theme.bg.ignoresSafeArea())
             .navigationTitle("Edit \(req.agentId)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }.foregroundStyle(Theme.textSecondary)
+                    Button("Cancel") { dismiss() }.foregroundStyle(Theme.textMuted)
                 }
             }
         }
@@ -172,46 +164,46 @@ struct AgentEditView: View {
                 MonoField(label: "Model", text: $req.model)
             }
             VStack(alignment: .leading, spacing: 6) {
-                Text("INSTRUCTIONS (AGENTS.md)")
-                    .font(.system(.caption2, design: .monospaced))
-                    .foregroundStyle(Theme.textSecondary)
+                Text("Instructions (AGENTS.md)")
+                    .font(Theme.Font.label)
+                    .foregroundStyle(Theme.textMuted)
                 TextEditor(text: $req.instructions)
-                    .font(.system(.caption, design: .monospaced))
-                    .foregroundStyle(Theme.textPrimary)
+                    .font(Theme.Font.monoCaption)
+                    .foregroundStyle(Theme.text)
                     .scrollContentBackground(.hidden)
                     .frame(minHeight: 160)
                     .padding(8)
-                    .background(Theme.bgSecondary)
+                    .background(Theme.card)
                     .overlay(RoundedRectangle(cornerRadius: Theme.radius).stroke(Theme.borderColor, lineWidth: Theme.border))
             }
             Button {
                 Task { await vm.saveEdit(req) }
             } label: {
                 HStack {
-                    if vm.edit == .saving { ProgressView().tint(Theme.bgPrimary) }
+                    if vm.edit == .saving { ProgressView().tint(Theme.bg) }
                     Text(vm.edit == .saving ? "Asking main…" : "Save Changes")
-                        .font(.system(.body, design: .monospaced).weight(.semibold))
+                        .font(Theme.Font.body.weight(.semibold))
                 }
                 .frame(maxWidth: .infinity).padding(.vertical, 12)
-                .background(Theme.accent).foregroundStyle(Theme.bgPrimary)
+                .background(Theme.brand).foregroundStyle(.white)
                 .clipShape(RoundedRectangle(cornerRadius: Theme.radius))
             }
             .disabled(vm.edit == .saving)
             Text("Changes go through your main agent (agents.update / agents.files.set). Takes up to a minute.")
-                .font(.system(.caption2, design: .monospaced))
-                .foregroundStyle(Theme.textSecondary)
+                .font(Theme.Font.caption)
+                .foregroundStyle(Theme.textMuted)
         }
     }
 
     private func done(_ title: String, _ msg: String, _ color: Color) -> some View {
         VStack(spacing: 12) {
-            Text(title).font(.system(.headline, design: .monospaced)).foregroundStyle(color)
-            Text(msg).font(.system(.caption, design: .monospaced))
-                .foregroundStyle(Theme.textSecondary).multilineTextAlignment(.center)
+            Text(title).font(Theme.Font.title).foregroundStyle(color)
+            Text(msg).font(Theme.Font.caption)
+                .foregroundStyle(Theme.textMuted).multilineTextAlignment(.center)
             Button("Done") { dismiss() }
-                .font(.system(.body, design: .monospaced).weight(.semibold))
+                .font(Theme.Font.body.weight(.semibold))
                 .frame(maxWidth: .infinity).padding(.vertical, 12)
-                .background(Theme.accent).foregroundStyle(Theme.bgPrimary)
+                .background(Theme.brand).foregroundStyle(.white)
                 .clipShape(RoundedRectangle(cornerRadius: Theme.radius))
         }
         .frame(maxWidth: .infinity).padding(.top, 40)

@@ -83,11 +83,17 @@ xcodebuild -project OpenClawMobile/OpenClawMobile.xcodeproj \
 
 ## Design system rules
 
-Dark mode only. All tokens live in `Sources/DesignSystem/Theme.swift` — use them, never inline values:
+Dark mode only. All tokens live in `Sources/DesignSystem/Theme.swift` — use them, never inline values
+(`DesignSystemTests` fails the build on any `Color(hex:`, numeric `cornerRadius(`, or `.shadow(` outside it):
 
-- Corner radius is **4pt everywhere**; elevation via **1px borders, never shadows**.
-- Accent is terminal green (`#22C55E`); agent status colors are defined once in the DesignSystem layer.
-- Monospaced type for code/logs/paths; user bubbles green-tinted right, agent bubbles dark left.
+- **Official OpenClaw palette** (2026-09, from `openclaw/openclaw` docs.json + Control UI `base.css`): bg `#0E1015`,
+  card `#161920`, elevated `#191C24`; accent lobster red `#FF5C5C` (tint, links, live dot), brand `#D84A31`
+  (primary CTA fill, white text), teal `#14B8A6` (running/activity), ok/warn/danger `#22C55E`/`#F59E0B`/`#F87171`.
+- Corner radius **6pt for controls, chips, fields** (`Theme.radius`) and **10pt for cards, bubbles, sheets**
+  (`Theme.radiusCard`); elevation via **1px borders, never shadows**.
+- Agent/task status colors + SF Symbols are defined once (`AgentStatus`); status is never color alone.
+- **System type for UI** (`Theme.Font.title/body/caption/label`); **mono only for code, paths, ids, keys, logs**
+  (`Theme.Font.mono/monoCaption`). User bubbles accent-tinted right, agent turns full-width cards left.
 
 ## Docs location rule
 

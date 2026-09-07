@@ -32,12 +32,12 @@ struct CreateAgentView: View {
                 }
                 .padding(16)
             }
-            .background(Theme.bgPrimary.ignoresSafeArea())
+            .background(Theme.bg.ignoresSafeArea())
             .navigationTitle("New Agent")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }.foregroundStyle(Theme.textSecondary)
+                    Button("Cancel") { dismiss() }.foregroundStyle(Theme.textMuted)
                 }
             }
         }
@@ -66,21 +66,21 @@ struct CreateAgentView: View {
                 MonoField(label: "Model (optional)", placeholder: "haiku", text: $vm.req.model)
             }
             VStack(alignment: .leading, spacing: 6) {
-                Text("WHAT SHOULD IT DO?")
-                    .font(.system(.caption2, design: .monospaced))
-                    .foregroundStyle(Theme.textSecondary)
+                Text("What should it do?")
+                    .font(Theme.Font.label)
+                    .foregroundStyle(Theme.textMuted)
                 TextEditor(text: $vm.req.behavior)
-                    .font(.system(.body, design: .monospaced))
-                    .foregroundStyle(Theme.textPrimary)
+                    .font(Theme.Font.body)
+                    .foregroundStyle(Theme.text)
                     .scrollContentBackground(.hidden)
                     .frame(minHeight: 110)
                     .padding(8)
-                    .background(Theme.bgSecondary)
+                    .background(Theme.card)
                     .overlay(RoundedRectangle(cornerRadius: Theme.radius).stroke(Theme.borderColor, lineWidth: Theme.border))
                 if vm.req.behavior.isEmpty {
                     Text("e.g. \"For any message, only reply the current time in India (IST). Read the real clock each time.\"")
-                        .font(.system(.caption2, design: .monospaced))
-                        .foregroundStyle(Theme.textSecondary)
+                        .font(Theme.Font.caption)
+                        .foregroundStyle(Theme.textMuted)
                 }
             }
             PrimaryButton(title: "Create Agent", disabled: !vm.canSubmit) {
@@ -89,8 +89,8 @@ struct CreateAgentView: View {
             Text(app.settings.isConfigured
                  ? "The app asks your main agent to create this. It runs agents.create with its own admin rights — takes up to a minute, and isn't instant."
                  : "Demo mode — this adds a local agent so you can see the flow. Pair your gateway to create real ones.")
-                .font(.system(.caption2, design: .monospaced))
-                .foregroundStyle(Theme.textSecondary)
+                .font(Theme.Font.caption)
+                .foregroundStyle(Theme.textMuted)
         }
     }
 
@@ -100,12 +100,12 @@ struct CreateAgentView: View {
         VStack(spacing: 14) {
             ProgressView().tint(Theme.accent)
             Text("Asking main to set up “\(vm.req.name)”…")
-                .font(.system(.body, design: .monospaced))
-                .foregroundStyle(Theme.textPrimary)
+                .font(Theme.Font.body)
+                .foregroundStyle(Theme.text)
                 .multilineTextAlignment(.center)
             Text("main is running agents.create with its own admin rights. \(vm.elapsed)s elapsed.")
-                .font(.system(.caption, design: .monospaced))
-                .foregroundStyle(Theme.textSecondary)
+                .font(Theme.Font.caption)
+                .foregroundStyle(Theme.textMuted)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
@@ -116,11 +116,11 @@ struct CreateAgentView: View {
         VStack(spacing: 14) {
             Text(a.emoji ?? "✅").font(.system(size: 40))
             Text("Created \(a.displayName)")
-                .font(.system(.headline, design: .monospaced))
+                .font(Theme.Font.title)
                 .foregroundStyle(Theme.accent)
             Text("It's in your Agents list now.")
-                .font(.system(.caption, design: .monospaced))
-                .foregroundStyle(Theme.textSecondary)
+                .font(Theme.Font.caption)
+                .foregroundStyle(Theme.textMuted)
             PrimaryButton(title: "Open \(a.displayName) →") { onCreated(a); dismiss() }
         }
         .frame(maxWidth: .infinity)
@@ -131,11 +131,11 @@ struct CreateAgentView: View {
         VStack(spacing: 14) {
             Text("⏳").font(.system(size: 40))
             Text("Still working…")
-                .font(.system(.headline, design: .monospaced))
+                .font(Theme.Font.title)
                 .foregroundStyle(AgentStatus.waiting.color)
             Text("main hasn't finished within \(vm.elapsed)s. It may still complete — pull to refresh the Agents list in a moment, or check main directly.")
-                .font(.system(.caption, design: .monospaced))
-                .foregroundStyle(Theme.textSecondary)
+                .font(Theme.Font.caption)
+                .foregroundStyle(Theme.textMuted)
                 .multilineTextAlignment(.center)
             PrimaryButton(title: "Done") { dismiss() }
         }
@@ -147,11 +147,11 @@ struct CreateAgentView: View {
         VStack(spacing: 14) {
             Text("✗").font(.system(size: 40)).foregroundStyle(AgentStatus.failed.color)
             Text("Couldn't reach main")
-                .font(.system(.headline, design: .monospaced))
+                .font(Theme.Font.title)
                 .foregroundStyle(AgentStatus.failed.color)
             Text(message)
-                .font(.system(.caption, design: .monospaced))
-                .foregroundStyle(Theme.textSecondary)
+                .font(Theme.Font.caption)
+                .foregroundStyle(Theme.textMuted)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)

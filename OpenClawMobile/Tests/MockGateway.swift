@@ -16,10 +16,15 @@ final class MockGateway: @unchecked Sendable {
     var expiredCode: Bool
     /// Reply text streamed as chat deltas.
     var replyText: String
+    /// Hold back the `chat` final so the run stays active (Stop tests).
+    var holdFinal = false
 
     // Observability
     private(set) var verifiedSignatures = 0
     private(set) var receivedMethods: [String] = []
+    /// Every request frame received, with full params (interaction contracts).
+    private(set) var receivedFrames: [[String: Any]] = []
+    private var lastRunId: String?
 
     private var listener: NWListener!
     private var connections: [NWConnection] = []
@@ -111,6 +116,7 @@ final class MockGateway: @unchecked Sendable {
         guard let method = frame["method"] as? String,
               let id = frame["id"] as? String else { return }
         receivedMethods.append(method)
+        receivedFrames.append(frame)
         let params = frame["params"] as? [String: Any] ?? [:]
 
         switch method {
@@ -125,6 +131,14 @@ final class MockGateway: @unchecked Sendable {
                  "idempotencyKey": "cli-assistant:hist-1"],
             ]])
         case "chat.send":  handleChatSend(id: id, params: params, on: conn)
+        case "chat.abort":
+            // LIVE-shaped: ack, then the run's `chat` frame flips to state "aborted".
+            respond(conn, id: id, payload: ["ok": true])
+            let key = params["sessionKey"] as? String ?? "agent:main:main"
+            let runId = params["runId"] as? String ?? lastRunId ?? "unknown"
+            broadcast(subscribers.isEmpty ? [conn] : subscribers, ["type": "event", "event": "chat", "payload": [
+                "runId": runId, "sessionKey": key, "agentId": "main", "state": "aborted",
+            ]])
         default:
             respond(conn, id: id, ok: false,
                     error: ["code": "INVALID_REQUEST", "message": "unknown method \(method)"])
@@ -211,6 +225,7 @@ final class MockGateway: @unchecked Sendable {
         let text = params["message"] as? String ?? ""
         let key = params["sessionKey"] as? String ?? "main"
         let sessionKey = key.contains(":") ? key : "agent:\(key):\(key)"
+        lastRunId = idem
 
         respond(conn, id: id, payload: ["runId": idem, "status": "started"])
 
@@ -235,6 +250,7 @@ final class MockGateway: @unchecked Sendable {
                             "content": [["type": "text", "text": sofar]]],
             ]])
         }
+        guard !holdFinal else { return }
         broadcast(targets, ["type": "event", "event": "chat", "payload": [
             "runId": idem, "sessionKey": sessionKey, "agentId": "main",
             "seq": 4, "state": "final",

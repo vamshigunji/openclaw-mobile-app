@@ -20,14 +20,15 @@ enum MainAgentTask {
     /// a non-nil value (done) or the window elapses (pending). `onPoll` fires with
     /// elapsed seconds for progress UI.
     static func run<T>(
-        _ ws: GatewayWSSyncSource,
+        _ sync: any SyncSource,
         instruction: String,
         idempotencyKey: String,
         onPoll: ((Int) -> Void)? = nil,
         check: () async -> T?
     ) async -> Outcome<T> {
         do {
-            try await ws.send(agentId: orchestratorId, text: instruction, idempotencyKey: idempotencyKey)
+            try await sync.send(sessionKey: ChatThread.mainKey(agentId: orchestratorId), agentId: orchestratorId,
+                                text: instruction, idempotencyKey: idempotencyKey)
         } catch {
             return .failed((error as? LocalizedError)?.errorDescription ?? error.localizedDescription)
         }
