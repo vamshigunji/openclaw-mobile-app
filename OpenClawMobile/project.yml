@@ -7,7 +7,7 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "0.1.0"
+    MARKETING_VERSION: "0.2.0"
     CURRENT_PROJECT_VERSION: "1"
     DEVELOPMENT_TEAM: ""
     CODE_SIGNING_REQUIRED: "NO"
@@ -31,7 +31,10 @@ targets:
         # (eng review 2026-07-21, issue 2B — never ship ArbitraryLoads in a trust product)
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
-        NSCameraUsageDescription: "Scan the QR setup code from your gateway to pair this device."
+        NSCameraUsageDescription: "Take a photo to send to your agent, or scan the QR setup code from your gateway."
+        NSPhotoLibraryUsageDescription: "Attach photos and screenshots to messages for your agents."
+        NSMicrophoneUsageDescription: "Dictate messages to your agents with the microphone."
+        NSSpeechRecognitionUsageDescription: "Turn your dictation into message text. Recognition runs on this device when your language supports it; otherwise Apple's speech service processes the audio."
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.openclaw.mobile

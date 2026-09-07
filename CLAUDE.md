@@ -6,7 +6,7 @@ Guidance for Claude Code when working in this repository.
 
 **OpenClaw Mobile** — a phone-first iOS chat client for talking to autonomous OpenClaw agents running on a private server (Mac Mini / VPS, reached over a Cloudflare Tunnel `wss://` URL).
 
-Built and live-verified against a real gateway (2026-07): device pairing (DeviceTrust), real chat over WS with streamed replies, a **Slack-style multi-agent client** — bottom tab bar → agent roster (`agents.list`) → per-agent chat thread, all on one shared connection — a live **activity indicator** ("Searching the web", "Thinking…") driven only by real gateway signals, and **create / edit / delete agents** from the app. Still out: cockpit control, push notifications.
+Built and live-verified against a real gateway (2026-07): device pairing (DeviceTrust), real chat over WS with streamed replies, a **Slack-style multi-agent client** — bottom tab bar → agent roster (`agents.list`) → per-agent chat thread, all on one shared connection — a live **activity indicator** ("Searching the web", "Thinking…") driven only by real gateway signals, and **create / edit / delete agents** from the app. As of v0.2.0.0 the chat thread is a **developer chat**: Stop and Retry on a live run, fenced code blocks with Copy, a tool-call timeline built from `session.tool` events, photo/camera/file attachments, and on-device dictation — all on the official OpenClaw palette. Still out: cockpit control, push notifications.
 
 **Two authority contexts (the load-bearing mental model).** The phone's paired device token holds only `operator.read` + `operator.write`. Admin operations (`agents.create/update/delete`, `agents.files.set`, `terminal.*`) are `operator.admin` — the phone CANNOT call them. So agent create/edit/delete go through **approach B**: the app sends a structured instruction to the `main` agent (which runs in-process on the gateway with full local authority) via `chat.send`, then polls to confirm. The phone is always the *requester*; the main agent is the privileged *executor*. See `designs/2026-07-22-multi-agent-research.md`.
 
@@ -37,11 +37,13 @@ OpenClawMobile/            iOS app (single target, iOS 17+, Swift, SwiftUI)
     ├── Features/
     │   ├── Root/          AppModel (settings + ONE shared SyncSource), RootTabView (bottom nav)
     │   ├── Agents/        roster + per-agent create/edit/profile + MainAgentTask (approach B)
-    │   ├── Chat/          ChatView/ChatViewModel (per-agent thread), bubble, input bar
+    │   ├── Chat/          ChatView/ChatViewModel (session-keyed thread), bubble, input bar,
+    │   │                  MessageSegmenter + CodeBlockView (fenced code), ToolTimeline,
+    │   │                  Attachments (photo/camera/file), SpeechDictation
     │   └── Settings/      pairing flow (QR + paste) + gateway config
     ├── Services/          GatewayConnection (actor: 1 socket, reconnect), GatewayWSSyncSource,
     │                      SyncSource seam, DeviceAuth, PairingFlow, GatewayClient (demo), Keychain
-    ├── Models/            ChatMessage, AgentSummary, AgentActivity, GatewayDTOs
+    ├── Models/            ChatMessage, ChatThread, AgentSummary, AgentActivity, GatewayDTOs
     └── DesignSystem/      Theme.swift — tokens + shared MonoField/PrimaryButton/ActivityLine
 tools/phase0-verify.mjs    gateway handshake probe · phase0-roundtrip.mjs · rpc-probe.mjs · list-agents.mjs
 designs/                   tracked design docs (platform strategy, multi-agent research, tunnel guide)
@@ -64,7 +66,7 @@ xcodebuild -project OpenClawMobile/OpenClawMobile.xcodeproj \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build   # or test
 ```
 
-**Tests:** `OpenClawMobileTests` target, ~13 suites (crypto golden vectors, wire-protocol decode from live captures, pairing state machine, mock-gateway E2E, agent roster/activity/create/profile mapping). CI (`.github/workflows/ci.yml`) runs `xcodegen generate` → `xcodebuild test` on every PR. All pure logic is TDD'd against verbatim live-captured gateway JSON — never hand-invented shapes.
+**Tests:** `OpenClawMobileTests` target, ~21 suites (crypto golden vectors, wire-protocol decode from live captures, pairing state machine, mock-gateway E2E, agent roster/activity/create/profile mapping, design-system token enforcement, thread keys, Stop/Retry lifecycle, message segmenting, tool events, attachment intake/budget/send, dictation). CI (`.github/workflows/ci.yml`) runs `xcodegen generate` → `xcodebuild test` on every PR. All pure logic is TDD'd against verbatim live-captured gateway JSON — never hand-invented shapes.
 
 **QA hooks (DEBUG only):** `--seed-demo` (+ `SEED_HOST`/`SEED_DEVICE_TOKEN`/`SEED_DEVICE_KEY`/`SEED_TEXT` env) seeds a paired identity and auto-sends; `--open-settings` / `--open-create` / `--open-profile <id>` drive screens the simulator can't tap.
 
@@ -72,22 +74,30 @@ xcodebuild -project OpenClawMobile/OpenClawMobile.xcodeproj \
 
 - **MVVM with a thin service layer.** Views → view models → services; views never touch network or disk. One `@Observable` view model per screen (iOS 17 Observation framework — no Combine, no `ObservableObject`).
 - **One shared connection.** `AppModel` owns settings + a single `SyncSource` (`GatewayWSSyncSource` → `GatewayConnection` actor: one socket, one handshake, reconnect w/ backoff + auto-resubscribe). Every agent thread and the roster share it — never open a socket per agent/screen.
-- **Multi-agent routing.** Roster from `agents.list`; a thread targets an agent by canonical session key `agent:<id>:main` + matching `agentId` (a bare key + separate agentId is rejected — LIVE-verified). Inbound events carry `agentId`; each thread filters the shared stream via `InboundEnvelope.matchesAgent`.
+- **Multi-agent routing.** Roster from `agents.list`; `ChatThread` (Models) carries the session key + agentId a screen is bound to, with `ChatThread.mainKey(agentId:)` producing the canonical `agent:<id>:main` (a bare key + separate agentId is rejected — LIVE-verified). Every `SyncSource` method is session-keyed, so a non-main session (a task thread) needs no new plumbing. Inbound events carry `agentId`; each thread filters the shared stream via `InboundEnvelope.matchesAgent`.
 - **Admin ops go through the main agent (approach B).** The phone can't call `agents.create/update/delete` (operator.admin). `MainAgentTask.run` sends a structured instruction to `main` via `chat.send`, then polls `agents.list` to confirm. Same pattern for create, edit, delete.
 - **Activity indicator = real signals only.** `AgentActivity.from(event)` maps `session.tool`/`agent`/`chat` events to a verb ("Searching the web"…). Unknown signal → "Working…" fallback; NEVER a fabricated verb. Tool names are claude-cli style (`WebSearch`, `Bash`). Pinned by tests against live JSON.
 - **Zero third-party dependencies.** URLSession, Keychain (Security framework), CryptoKit, Network.framework (mock gateway in tests), Foundation only.
 - `async/await` everywhere; errors surface as the typed `GatewayError` enum (`.unauthorized`, `.unreachable`, `.badStatus`, `.pairingPending(requestId:)`, `.bootstrapExpired`).
 - **Optimistic UI:** user messages append immediately; streaming assistant bubble fills from `chat` deltas; the gateway's echo of our own send is deduped by idempotency key; failures mark the bubble failed with retry.
+- **Developer chat surface.** `SyncSource.send` returns the gateway's `runId` and `abort` cancels it (`chat.send` / `chat.abort`, both operator.write) — that pair backs Stop; `runEnds` clears Stop exactly when the run finishes, and a failed bubble offers Retry. `MessageSegmenter` splits a turn into prose and fenced code, `CodeBlockView` renders code with Copy, `ToolTimeline` renders `session.tool` start/result pairs as a per-turn timeline.
+- **Attachments and dictation.** Photo, camera, and file picks go out on native `chat.send` (`Attachments.swift`), sized against the ceilings the gateway advertises in `hello-ok` `policy` (fallback defaults: 20 MB per attachment, 6 MB per image, 25 MB per frame) — check the size before decoding, not after. Dictation is on-device `SFSpeechRecognizer` (`SpeechDictation.swift`). Both need the `Info.plist` usage strings declared in `project.yml`; add new ones there, not in the generated plist.
 - **Demo mode:** `DemoSyncSource` serves a canned 3-agent roster + `GatewayClient` canned stream when no host is configured, so the app runs and screenshots standalone. Preserve this path.
 - Persistence split: Ed25519 device key + token → Keychain; host/prefs/deviceToken → UserDefaults+Keychain. (Conversation JSON persistence is designed but not yet built — history backfills live from `chat.history`.)
 
 ## Design system rules
 
-Dark mode only. All tokens live in `Sources/DesignSystem/Theme.swift` — use them, never inline values:
+Dark mode only. All tokens live in `Sources/DesignSystem/Theme.swift` — use them, never inline values
+(`DesignSystemTests` fails the build on any `Color(hex:`, numeric `cornerRadius(`, or `.shadow(` outside it):
 
-- Corner radius is **4pt everywhere**; elevation via **1px borders, never shadows**.
-- Accent is terminal green (`#22C55E`); agent status colors are defined once in the DesignSystem layer.
-- Monospaced type for code/logs/paths; user bubbles green-tinted right, agent bubbles dark left.
+- **Official OpenClaw palette** (2026-09, from `openclaw/openclaw` docs.json + Control UI `base.css`): bg `#0E1015`,
+  card `#161920`, elevated `#191C24`; accent lobster red `#FF5C5C` (tint, links, live dot), brand `#D84A31`
+  (primary CTA fill, white text), teal `#14B8A6` (running/activity), ok/warn/danger `#22C55E`/`#F59E0B`/`#F87171`.
+- Corner radius **6pt for controls, chips, fields** (`Theme.radius`) and **10pt for cards, bubbles, sheets**
+  (`Theme.radiusCard`); elevation via **1px borders, never shadows**.
+- Agent/task status colors + SF Symbols are defined once (`AgentStatus`); status is never color alone.
+- **System type for UI** (`Theme.Font.title/body/caption/label`); **mono only for code, paths, ids, keys, logs**
+  (`Theme.Font.mono/monoCaption`). User bubbles accent-tinted right, agent turns full-width cards left.
 
 ## Docs location rule
 

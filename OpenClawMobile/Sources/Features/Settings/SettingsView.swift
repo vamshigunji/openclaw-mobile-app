@@ -29,7 +29,7 @@ struct SettingsView: View {
                 }
                 .padding(16)
             }
-            .background(Theme.bgPrimary.ignoresSafeArea())
+            .background(Theme.bg.ignoresSafeArea())
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -48,8 +48,8 @@ struct SettingsView: View {
     @ViewBuilder
     private var pairingSection: some View {
         Text("Pair this device")
-            .font(.system(.headline, design: .monospaced))
-            .foregroundStyle(Theme.textPrimary)
+            .font(Theme.Font.title)
+            .foregroundStyle(Theme.text)
 
         switch flow.step {
         case .idle, .scanning:
@@ -58,8 +58,8 @@ struct SettingsView: View {
                 body: "Pairing lets this phone talk to your gateway with its own key. On your gateway, run `openclaw qr`, then scan it here.")
             PrimaryButton(title: "▣  Scan Setup Code") { showScanner = true }
             Text("— or —")
-                .font(.system(.caption2, design: .monospaced))
-                .foregroundStyle(Theme.textSecondary)
+                .font(Theme.Font.caption)
+                .foregroundStyle(Theme.textMuted)
                 .frame(maxWidth: .infinity)
             MonoField(label: "Paste Setup Code", placeholder: "eyJ1cmwiOiJ3c3M6…", text: $setupCode)
             PrimaryButton(title: "Pair Device", secondary: true, disabled: SetupCode.parse(setupCode) == nil) {
@@ -67,32 +67,32 @@ struct SettingsView: View {
             }
 
         case .connecting:
-            pairBadge("CONNECTING", color: Theme.accent, spinning: true)
+            pairBadge("Connecting", color: Theme.accent, spinning: true)
             ladder(step1: .active, step2: .pending, step3: .pending)
             PrimaryButton(title: "Cancel", secondary: true) { flow.cancel() }
 
         case .waitingApproval(let attempt):
-            pairBadge("WAITING ON GATEWAY", color: AgentStatus.waiting.color)
+            pairBadge("Waiting on gateway", color: AgentStatus.waiting.color)
             ladder(step1: .done, step2: .active, step3: .pending)
             VStack(alignment: .leading, spacing: 8) {
                 Text("Your gateway needs to approve this device once.")
-                    .font(.system(.caption, design: .monospaced))
-                    .foregroundStyle(Theme.textPrimary)
+                    .font(Theme.Font.caption)
+                    .foregroundStyle(Theme.text)
                 Text("Ask your OpenClaw (or run on the gateway box):")
-                    .font(.system(.caption2, design: .monospaced))
-                    .foregroundStyle(Theme.textSecondary)
+                    .font(Theme.Font.caption)
+                    .foregroundStyle(Theme.textMuted)
                 codeBlock("openclaw devices approve \(flow.lastRequestId ?? "--latest")")
                 Text("Retrying automatically — \(countdown(attempt)) remaining")
-                    .font(.system(.caption2, design: .monospaced))
-                    .foregroundStyle(Theme.textSecondary)
+                    .font(Theme.Font.caption)
+                    .foregroundStyle(Theme.textMuted)
             }
             .padding(12)
-            .background(Theme.bgSecondary)
+            .background(Theme.card)
             .overlay(RoundedRectangle(cornerRadius: Theme.radius).stroke(Theme.borderColor, lineWidth: Theme.border))
             PrimaryButton(title: "Cancel", secondary: true) { flow.cancel() }
 
         case .paired(let minted):
-            pairBadge("PAIRED", color: Theme.accent)
+            pairBadge("Paired", color: Theme.accent)
             ladder(step1: .done, step2: .done, step3: .done)
             infoCard(
                 title: "This phone now has its own device key.",
@@ -110,18 +110,18 @@ struct SettingsView: View {
     private func failedView(_ reason: PairingFlow.FailureReason) -> some View {
         switch reason {
         case .expiredCode:
-            pairBadge("CODE EXPIRED", color: AgentStatus.failed.color)
+            pairBadge("Code expired", color: AgentStatus.failed.color)
             infoCard(title: "Setup codes only live a few minutes.",
                      body: "Generate a fresh one on your gateway with `openclaw qr`, then scan it — takes under 10 seconds.")
             PrimaryButton(title: "▣  Scan New Code") { flow.reset(); showScanner = true }
         case .timeout:
-            pairBadge("APPROVAL TIMED OUT", color: AgentStatus.failed.color)
+            pairBadge("Approval timed out", color: AgentStatus.failed.color)
             infoCard(title: "The approval didn't arrive in time.",
                      body: "Approve on the gateway, then retry:")
             codeBlock("openclaw devices approve \(flow.lastRequestId ?? "--latest")")
             PrimaryButton(title: "Retry") { startPairing(with: setupCode) }
         case .cameraDenied:
-            pairBadge("CAMERA UNAVAILABLE", color: AgentStatus.waiting.color)
+            pairBadge("Camera unavailable", color: AgentStatus.waiting.color)
             infoCard(title: "No camera access.",
                      body: "Paste the setup code below instead — same result. (Enable camera access in iOS Settings to scan.)")
             MonoField(label: "Paste Setup Code", placeholder: "eyJ1cmwiOiJ3c3M6…", text: $setupCode)
@@ -129,7 +129,7 @@ struct SettingsView: View {
                 startPairing(with: setupCode)
             }
         case .other(let message):
-            pairBadge("PAIRING FAILED", color: AgentStatus.failed.color)
+            pairBadge("Pairing failed", color: AgentStatus.failed.color)
             infoCard(title: "Something went wrong.", body: message)
             PrimaryButton(title: "Retry") { startPairing(with: setupCode) }
         }
@@ -137,14 +137,14 @@ struct SettingsView: View {
 
     private var pairedStatusRow: some View {
         HStack(spacing: 8) {
-            pairBadge("PAIRED", color: Theme.accent)
+            pairBadge("Paired", color: Theme.accent)
             Text("device key in Keychain")
-                .font(.system(.caption2, design: .monospaced))
-                .foregroundStyle(Theme.textSecondary)
+                .font(Theme.Font.caption)
+                .foregroundStyle(Theme.textMuted)
             Spacer()
             Button("Re-pair") { settings.deviceToken = ""; flow.reset() }
-                .font(.system(.caption, design: .monospaced))
-                .foregroundStyle(Theme.textSecondary)
+                .font(Theme.Font.caption)
+                .foregroundStyle(Theme.textMuted)
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Paired. Device key stored in Keychain.")
@@ -166,17 +166,17 @@ struct SettingsView: View {
                 }
                 if let testResult {
                     Text(testResult)
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundStyle(Theme.textSecondary)
+                        .font(Theme.Font.caption)
+                        .foregroundStyle(Theme.textMuted)
                 }
             }
             .padding(.top, 10)
         } label: {
-            Text("ADVANCED — HOST, TOKEN, MODEL")
-                .font(.system(.caption2, design: .monospaced))
-                .foregroundStyle(Theme.textSecondary)
+            Text("Advanced: host, token, model")
+                .font(Theme.Font.label)
+                .foregroundStyle(Theme.textMuted)
         }
-        .tint(Theme.textSecondary)
+        .tint(Theme.textMuted)
     }
 
     // MARK: - Actions
@@ -204,15 +204,15 @@ struct SettingsView: View {
                 })
             VStack(spacing: 8) {
                 Text("Point at the QR from `openclaw qr`. Host and code fill in automatically.")
-                    .font(.system(.caption, design: .monospaced))
-                    .foregroundStyle(Theme.textSecondary)
+                    .font(Theme.Font.caption)
+                    .foregroundStyle(Theme.textMuted)
                     .multilineTextAlignment(.center)
                 Button("Enter code manually instead") { showScanner = false }
-                    .font(.system(.caption, design: .monospaced))
+                    .font(Theme.Font.caption)
                     .foregroundStyle(Theme.accent)
             }
             .padding(16)
-            .background(Theme.bgPrimary.opacity(0.9))
+            .background(Theme.bg.opacity(0.9))
         }
         .ignoresSafeArea()
     }
@@ -270,8 +270,8 @@ struct SettingsView: View {
                 .overlay(Circle().stroke(color, lineWidth: Theme.border))
                 .frame(width: 8, height: 8)
             Text(label)
-                .font(.system(.caption, design: .monospaced))
-                .foregroundStyle(state == .pending ? Theme.textSecondary : color)
+                .font(Theme.Font.caption)
+                .foregroundStyle(state == .pending ? Theme.textMuted : color)
         }
         .accessibilityLabel("\(label): \(state == .done ? "done" : state == .active ? "in progress" : "pending")")
     }
@@ -284,7 +284,7 @@ struct SettingsView: View {
                 Circle().fill(color).frame(width: 7, height: 7)
             }
             Text(label)
-                .font(.system(.caption2, design: .monospaced))
+                .font(Theme.Font.caption)
                 .foregroundStyle(color)
         }
         .padding(.horizontal, 7)
@@ -294,11 +294,11 @@ struct SettingsView: View {
 
     private func codeBlock(_ text: String) -> some View {
         Text(text)
-            .font(.system(.caption, design: .monospaced))
+            .font(Theme.Font.monoCaption)
             .foregroundStyle(Theme.accent)
             .padding(8)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Theme.bgPrimary)
+            .background(Theme.bg)
             .overlay(RoundedRectangle(cornerRadius: Theme.radius).stroke(Theme.borderColor, lineWidth: Theme.border))
             .textSelection(.enabled)
     }
@@ -307,16 +307,16 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 8) {
             if let title {
                 Text(title)
-                    .font(.system(.caption, design: .monospaced))
-                    .foregroundStyle(Theme.textPrimary)
+                    .font(Theme.Font.caption)
+                    .foregroundStyle(Theme.text)
             }
             Text(.init(body)) // markdown backticks render mono-accent
-                .font(.system(.caption, design: .monospaced))
-                .foregroundStyle(Theme.textSecondary)
+                .font(Theme.Font.caption)
+                .foregroundStyle(Theme.textMuted)
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.bgSecondary)
+        .background(Theme.card)
         .overlay(RoundedRectangle(cornerRadius: Theme.radius).stroke(Theme.borderColor, lineWidth: Theme.border))
     }
 

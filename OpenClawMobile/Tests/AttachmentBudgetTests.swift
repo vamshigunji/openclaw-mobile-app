@@ -1,0 +1,70 @@
+import XCTest
+@testable import OpenClawMobile
+
+/// Attachment budgets (design §4.2): images are re-encoded once (2048 px / 0.8) and rejected
+/// only if still over `maxImageBytes`; small text files inline as a fenced block; other files
+/// attach up to `maxBytes`; the whole frame must fit `maxPayload`. Limits come from hello-ok
+/// `policy.attachments` when captured, else the protocol defaults.
+final class AttachmentBudgetTests: XCTestCase {
+    private let policy = AttachmentPolicy.default
+    private let mib = 1024 * 1024
+
+    func testDefaultsMatchProtocolDoc() {
+        XCTAssertEqual(policy.maxBytes, 20 * mib)
+        XCTAssertEqual(policy.maxImageBytes, 6 * mib)
+        XCTAssertEqual(policy.maxPayload, 25 * mib)
+    }
+
+    func testImagesAlwaysGetTheSingleReencodeStep() {
+        let plan = AttachmentBudget.plan(fileName: "IMG_0001.HEIC", mimeType: "image/heic",
+                                         bytes: 7 * mib, isImage: true, policy: policy)
+        XCTAssertEqual(plan, .reencodeImage(maxEdge: 2048, quality: 0.8))
+    }
+
+    func testReencodedImageStillOverCapIsRejected() {
+        XCTAssertEqual(AttachmentBudget.verifyImage(bytes: 7 * mib, policy: policy), .tooLarge(max: 6 * mib))
+        XCTAssertEqual(AttachmentBudget.verifyImage(bytes: 1_200_000, policy: policy), .ok)
+    }
+
+    func testSmallSourceFileInlinesAsFence() {
+        let plan = AttachmentBudget.plan(fileName: "AppModel.swift", mimeType: "public.swift-source",
+                                         bytes: 8 * 1024, isImage: false, policy: policy)
+        XCTAssertEqual(plan, .inlineFence(lang: "swift"))
+        XCTAssertEqual(AttachmentBudget.fence(fileName: "AppModel.swift", lang: "swift", text: "let x = 1"),
+                       "`AppModel.swift`:\n```swift\nlet x = 1\n```")
+    }
+
+    func testLargeTextFileAttachesInsteadOfInlining() {
+        let plan = AttachmentBudget.plan(fileName: "build.log", mimeType: "text/plain",
+                                         bytes: 300 * 1024, isImage: false, policy: policy)
+        XCTAssertEqual(plan, .attach)
+    }
+
+    func testOversizedBinaryIsRejectedWithTheCap() {
+        let plan = AttachmentBudget.plan(fileName: "spec.pdf", mimeType: "application/pdf",
+                                         bytes: 21 * mib, isImage: false, policy: policy)
+        XCTAssertEqual(plan, .tooLarge(max: 20 * mib))
+    }
+
+    func testFrameOverMaxPayloadIsRejectedBeforeSend() {
+        // 20 MB of attachment bytes inflate to ~26.7 MB as base64 — over the 25 MiB frame limit.
+        let over = AttachmentBudget.checkPayload(messageBytes: 100, attachmentBytes: [20 * mib], policy: policy)
+        XCTAssertEqual(over, .payloadTooLarge(max: 25 * mib))
+        let ok = AttachmentBudget.checkPayload(messageBytes: 100, attachmentBytes: [2 * mib, 3 * mib], policy: policy)
+        XCTAssertEqual(ok, .ok)
+    }
+
+    func testPolicyComesFromHelloOkFixtureWhenCaptured() throws {
+        let fixture = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("Fixtures/hello-ok.json")
+        guard FileManager.default.fileExists(atPath: fixture.path) else {
+            // Phase 3 runs before the phase-0 capture; re-run this case once P0.3 lands.
+            XCTAssertEqual(AttachmentPolicy.from(helloOK: Data("{}".utf8)), .default)
+            return
+        }
+        let decoded = AttachmentPolicy.from(helloOK: try Data(contentsOf: fixture))
+        XCTAssertGreaterThan(decoded.maxBytes, 0)
+        XCTAssertGreaterThan(decoded.maxImageBytes, 0)
+        XCTAssertLessThanOrEqual(decoded.maxImageBytes, decoded.maxBytes)
+    }
+}

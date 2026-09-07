@@ -55,7 +55,7 @@ actor GatewayConnection {
         guard let ws else { throw GatewayError.unreachable("not connected") }
         let data = try JSONSerialization.data(withJSONObject: frame)
         let text = String(decoding: data, as: UTF8.self)
-        WireLog.out(text)
+        WireLog.out(Self.logSafe(frame) ?? text)
         try await ws.send(.string(text))
 
         // Watchdog: never let a caller hang on a dead socket.
@@ -66,6 +66,22 @@ actor GatewayConnection {
         return try await withCheckedThrowingContinuation { cont in
             pending[id] = cont
         }
+    }
+
+    /// The frame for the DEBUG wire log with attachment bodies replaced by their size —
+    /// photos never land in a log file. nil when there is nothing to redact.
+    private static func logSafe(_ frame: [String: Any]) -> String? {
+        guard var params = frame["params"] as? [String: Any],
+              let attachments = params["attachments"] as? [[String: Any]] else { return nil }
+        params["attachments"] = attachments.map { a -> [String: Any] in
+            var copy = a
+            if let content = a["content"] as? String { copy["content"] = "<\(content.count) base64 chars>" }
+            return copy
+        }
+        var redacted = frame
+        redacted["params"] = params
+        guard let data = try? JSONSerialization.data(withJSONObject: redacted) else { return nil }
+        return String(decoding: data, as: UTF8.self)
     }
 
     /// Live event stream (chat deltas, session.message, sessions.changed…).
