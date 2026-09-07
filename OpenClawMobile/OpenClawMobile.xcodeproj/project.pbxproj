@@ -25,6 +25,7 @@
 		3C140C5463DC172E35BBBBCA /* MessageSegmenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A892AF81C1D0DCAB2B27C7C /* MessageSegmenter.swift */; };
 		3FB88344CF9ED08A9B03056D /* Attachments.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D935CDD6ABCE2E4D7CB8103 /* Attachments.swift */; };
 		460E8C2A2D00D5BDB1F97048 /* ChatThread.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B21F790BFF830E12458900E /* ChatThread.swift */; };
+		4BA927164288A7186544CD2D /* BoardInteractionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD3B4A15AB4BCB2FDBD2379C /* BoardInteractionTests.swift */; };
 		4D61FB1E3ED7DB1103293E18 /* ToolEventTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71AD36B7F11D0017AA31A553 /* ToolEventTests.swift */; };
 		4E9CAE1F51AF5CE2AA8E7E3C /* sessions.list.json in Resources */ = {isa = PBXBuildFile; fileRef = 46506221F930B611E9EB118B /* sessions.list.json */; };
 		519222A28B7279C6844CA917 /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89FAC2B716660E999A46AE1C /* QRScannerView.swift */; };
@@ -137,6 +138,7 @@
 		B20CA6E0FD166E4747E1973C /* DemoBoard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoBoard.swift; sourceTree = "<group>"; };
 		B92E671EBE6477CBCA5FC0D3 /* BoardModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardModelTests.swift; sourceTree = "<group>"; };
 		BA5D31A3265B04D46AC1E06C /* AgentActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentActivity.swift; sourceTree = "<group>"; };
+		BD3B4A15AB4BCB2FDBD2379C /* BoardInteractionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardInteractionTests.swift; sourceTree = "<group>"; };
 		BF906440FA91E8C53FAAE01A /* GatewayWSSyncSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GatewayWSSyncSource.swift; sourceTree = "<group>"; };
 		BFF301D1890CD8FE2B381170 /* LiveDiagnosticTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveDiagnosticTests.swift; sourceTree = "<group>"; };
 		C3944C890D9BC63414594120 /* PairingFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingFlowTests.swift; sourceTree = "<group>"; };
@@ -245,6 +247,7 @@
 				1E679ABDA2B517A0425433E5 /* AttachmentBudgetTests.swift */,
 				84F7BCAE455DEECCDC3DFFB5 /* AttachmentIntakeTests.swift */,
 				C67B03251A36A95F57BEA09D /* AttachmentSendTests.swift */,
+				BD3B4A15AB4BCB2FDBD2379C /* BoardInteractionTests.swift */,
 				B92E671EBE6477CBCA5FC0D3 /* BoardModelTests.swift */,
 				4ABC4A5FC5F374D739651FB5 /* BoardViewModelTests.swift */,
 				A379365F019206C1A61C4465 /* ChatStopRetryTests.swift */,
@@ -461,6 +464,7 @@
 				0E43E7F9EF408049420EF005 /* AttachmentBudgetTests.swift in Sources */,
 				7EE397B9130643A43F6C3C29 /* AttachmentIntakeTests.swift in Sources */,
 				DFE2D21D7C7B6E3710B3A39B /* AttachmentSendTests.swift in Sources */,
+				4BA927164288A7186544CD2D /* BoardInteractionTests.swift in Sources */,
 				192C02385506C1DE1FCA30E7 /* BoardModelTests.swift in Sources */,
 				56CB6BA3E087461DE12421BC /* BoardViewModelTests.swift in Sources */,
 				A973DA2BC1EEC55F78447165 /* ChatStopRetryTests.swift in Sources */,

@@ -18,6 +18,17 @@ final class MockGateway: @unchecked Sendable {
     var replyText: String
     /// Hold back the `chat` final so the run stays active (Stop tests).
     var holdFinal = false
+    /// Roster served for `agents.list`.
+    var agentsFixture: [[String: Any]] = [
+        ["id": "main", "name": "main", "workspace": "/Users/dev/agent-workspaces/main"],
+        ["id": "writer", "name": "Writer"],
+        ["id": "researcher", "name": "Researcher"],
+    ]
+    /// Raw `sessions.list` / `tasks.list` payload rows served to the Board.
+    var sessionsFixture: Data?
+    var tasksFixture: Data?
+    /// Reject the next `sessions.patch` (rollback tests).
+    var failNextPatch = false
 
     // Observability
     private(set) var verifiedSignatures = 0
@@ -130,6 +141,28 @@ final class MockGateway: @unchecked Sendable {
                  "content": [["type": "text", "text": "Prior message from history."]],
                  "idempotencyKey": "cli-assistant:hist-1"],
             ]])
+        case "agents.list":
+            respond(conn, id: id, payload: ["agents": agentsFixture, "defaultId": "main"])
+        case "sessions.list":
+            respond(conn, id: id, payload: jsonObject(sessionsFixture) ?? ["sessions": []])
+        case "tasks.list":
+            respond(conn, id: id, payload: jsonObject(tasksFixture) ?? ["tasks": []])
+        case "sessions.patch":
+            if failNextPatch {
+                failNextPatch = false
+                respond(conn, id: id, ok: false,
+                        error: ["code": "CONFLICT", "message": "session changed since you read it"])
+            } else {
+                respond(conn, id: id, payload: ["ok": true])
+                // The real gateway broadcasts a roster delta after a successful patch.
+                broadcast(subscribers.isEmpty ? [conn] : subscribers,
+                          ["type": "event", "event": "sessions.changed", "payload": [:]])
+            }
+        case "sessions.create":
+            let key = "agent:\(params["agentId"] as? String ?? "main"):new-\(receivedFrames.count)"
+            respond(conn, id: id, payload: ["session": ["key": key, "sessionId": "s-new"]])
+        case "tasks.cancel":
+            respond(conn, id: id, payload: ["found": true, "cancelled": true])
         case "chat.send":  handleChatSend(id: id, params: params, on: conn)
         case "chat.abort":
             // LIVE-shaped: ack, then the run's `chat` frame flips to state "aborted".
@@ -257,6 +290,12 @@ final class MockGateway: @unchecked Sendable {
             "message": ["role": "assistant",
                         "content": [["type": "text", "text": replyText]]],
         ]])
+    }
+
+    /// The fixture's top-level object, or nil when none was set.
+    private func jsonObject(_ data: Data?) -> [String: Any]? {
+        guard let data else { return nil }
+        return try? JSONSerialization.jsonObject(with: data) as? [String: Any]
     }
 
     private func broadcast(_ targets: [NWConnection], _ frame: [String: Any]) {

@@ -54,6 +54,16 @@ protocol SyncSource: Sendable {
     /// Ticks when the session index changes (`sessions.changed`), so the Board can re-read.
     func sessionChanges() -> AsyncStream<Void>
 
+    /// Organization-only edits to a session row (`sessions.patch`, operator.write):
+    /// `archived`, `category`. `expectedSessionId` guards against a stale read.
+    func patchSession(key: String, expectedSessionId: String?, fields: [String: Any]) async throws
+
+    /// Create an empty session card (`sessions.create`, operator.write). No message is sent.
+    func createSession(agentId: String, label: String, category: String?) async throws
+
+    /// Cancel one background task (`tasks.cancel`, operator.write).
+    func cancelTask(taskId: String) async throws
+
     /// The runId of every run that ends in ONE session (`chat` final|aborted|error, lifecycle
     /// end|error). Lets a thread clear Stop for exactly the run that finished. Default: none.
     func runEnds(sessionKey: String) -> AsyncStream<String>
@@ -63,6 +73,9 @@ extension SyncSource {
     func listSessions() async throws -> [SessionSummary] { [] }
     func listTasks() async throws -> [TaskSummary] { [] }
     func sessionChanges() -> AsyncStream<Void> { AsyncStream { $0.finish() } }
+    func patchSession(key: String, expectedSessionId: String?, fields: [String: Any]) async throws {}
+    func createSession(agentId: String, label: String, category: String?) async throws {}
+    func cancelTask(taskId: String) async throws {}
     func toolEvents(sessionKey: String) -> AsyncStream<ToolEvent> { AsyncStream { $0.finish() } }
     func runEnds(sessionKey: String) -> AsyncStream<String> { AsyncStream { $0.finish() } }
 }

@@ -59,6 +59,86 @@ final class BoardViewModel {
         board = Board.make(sessions: rows, tasks: tasks, agents: agents)
     }
 
+    /// Lane names already on the board, for the "move to project" menu.
+    var laneNames: [String] { board.lanes.map(\.key) }
+
+    // MARK: - Actions (design §5.5) — each is exactly one write
+
+    /// Archive or restore a card. Archiving a running session cancels its work, so the view
+    /// confirms first.
+    func archive(_ card: BoardCard, archived: Bool) async {
+        await write(optimistic: { $0.archived = archived }, on: card) { [sync] session in
+            try await sync.patchSession(key: session.key, expectedSessionId: session.sessionId,
+                                        fields: ["archived": archived])
+        }
+    }
+
+    /// Move a card to another project lane (`category` is the only field touched).
+    func move(_ card: BoardCard, toLane lane: String) async {
+        await write(optimistic: { $0.category = lane }, on: card) { [sync] session in
+            try await sync.patchSession(key: session.key, expectedSessionId: session.sessionId,
+                                        fields: ["category": lane])
+        }
+    }
+
+    /// Start a backlog card: the card's title is the ask, plus any extra notes.
+    func start(_ card: BoardCard, note: String) async {
+        let extra = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        let message = extra.isEmpty ? card.title : "\(card.title)\n\n\(extra)"
+        await perform {
+            try await self.sync.send(sessionKey: card.session.key, agentId: card.session.agentId,
+                                     text: message, idempotencyKey: UUID().uuidString)
+        }
+    }
+
+    /// Stop the run on a card.
+    func stop(_ card: BoardCard) async {
+        await perform {
+            try await self.sync.abort(sessionKey: card.session.key,
+                                      agentId: card.session.agentId, runId: nil)
+        }
+    }
+
+    /// Cancel one background task.
+    func cancel(_ task: TaskSummary) async {
+        await perform { try await self.sync.cancelTask(taskId: task.id) }
+    }
+
+    /// Create an empty card. It lands in Backlog until someone starts it.
+    func createTask(title: String, agentId: String, lane: String?) async {
+        await perform {
+            try await self.sync.createSession(agentId: agentId, label: title, category: lane)
+            await self.load()
+        }
+    }
+
+    /// Applies a row edit immediately, sends the write, and rolls back if it is rejected.
+    private func write(optimistic edit: (inout SessionSummary) -> Void, on card: BoardCard,
+                       _ send: @escaping (SessionSummary) async throws -> Void) async {
+        guard let index = sessions.firstIndex(where: { $0.key == card.session.key }) else { return }
+        let previous = sessions
+        edit(&sessions[index])
+        rebuild()
+        do {
+            try await send(card.session)
+            error = nil
+        } catch {
+            sessions = previous
+            rebuild()
+            self.error = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        }
+    }
+
+    /// A write with nothing to roll back (it changes gateway state, not a row we hold).
+    private func perform(_ body: @escaping () async throws -> Void) async {
+        do {
+            try await body()
+            error = nil
+        } catch {
+            self.error = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        }
+    }
+
     /// The thread a card opens.
     func thread(for card: BoardCard) -> ChatThread {
         ChatThread(sessionKey: card.session.key, agentId: card.session.agentId,

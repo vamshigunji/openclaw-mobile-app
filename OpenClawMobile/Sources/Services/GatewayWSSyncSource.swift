@@ -217,6 +217,29 @@ struct GatewayWSSyncSource: SyncSource {
         }
     }
 
+    /// `sessions.patch` — organization fields only (archived, category). Write-scoped.
+    func patchSession(key: String, expectedSessionId: String?, fields: [String: Any]) async throws {
+        var params: [String: Any] = fields
+        params["key"] = key
+        if let expectedSessionId { params["expectedSessionId"] = expectedSessionId }
+        let env = try await connection.request(method: "sessions.patch", params: params)
+        if env.ok == false { throw GatewayError.badStatus(0) }
+    }
+
+    /// `sessions.create` — a new card. Deliberately sends no `message`: creating is not starting.
+    func createSession(agentId: String, label: String, category: String?) async throws {
+        var params: [String: Any] = ["agentId": agentId, "label": label]
+        if let category, !category.isEmpty { params["category"] = category }
+        let env = try await connection.request(method: "sessions.create", params: params)
+        if env.ok == false { throw GatewayError.badStatus(0) }
+    }
+
+    /// `tasks.cancel` — stop one background task.
+    func cancelTask(taskId: String) async throws {
+        let env = try await connection.request(method: "tasks.cancel", params: ["taskId": taskId])
+        if env.ok == false { throw GatewayError.badStatus(0) }
+    }
+
     /// runIds of runs that ended in this session — `chat` final|aborted|error or a lifecycle
     /// end|error frame — so the thread clears Stop only for the run that actually finished.
     func runEnds(sessionKey: String) -> AsyncStream<String> {

@@ -6,6 +6,11 @@ struct BoardView: View {
     @Bindable var app: AppModel
     @State private var vm: BoardViewModel
     @State private var column: BoardColumn = .running
+    @State private var confirmArchive: BoardCard?
+    @State private var starting: BoardCard?
+    @State private var startNote = ""
+    @State private var movingLane: BoardCard?
+    @State private var showNewTask = false
 
     init(app: AppModel) {
         self.app = app
@@ -34,8 +39,37 @@ struct BoardView: View {
             .background(Theme.bg)
             .navigationTitle("Board")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { agentMenu } }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) { agentMenu }
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { showNewTask = true } label: { Image(systemName: "plus") }
+                        .accessibilityLabel("New task")
+                }
+            }
             .refreshable { await vm.load() }
+            .confirmationDialog(archiveTitle, isPresented: archiveBinding, presenting: confirmArchive) { card in
+                Button("Archive", role: .destructive) { Task { await vm.archive(card, archived: true) } }
+                Button("Cancel", role: .cancel) {}
+            } message: { card in
+                Text(card.column == .running
+                     ? "This session is running. Archiving it cancels the work in progress."
+                     : "It moves to Done. You can restore it from there.")
+            }
+            .sheet(item: $starting) { card in
+                StartCardSheet(title: card.title, note: $startNote) {
+                    Task { await vm.start(card, note: startNote); startNote = "" }
+                }
+            }
+            .sheet(item: $movingLane) { card in
+                LanePickerSheet(lanes: vm.laneNames, current: laneKey(of: card)) { lane in
+                    Task { await vm.move(card, toLane: lane) }
+                }
+            }
+            .sheet(isPresented: $showNewTask) {
+                NewTaskSheet(agents: vm.agents, lanes: vm.laneNames) { title, agentId, lane in
+                    Task { await vm.createTask(title: title, agentId: agentId, lane: lane) }
+                }
+            }
         }
         .onAppear { vm.start() }
     }
@@ -114,12 +148,48 @@ struct BoardView: View {
                                     BoardCardView(card: card)
                                 }
                                 .buttonStyle(.plain)
+                                .contextMenu { menu(for: card) }
                             }
                         }
                     }
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 24)
+            }
+        }
+    }
+
+    private var archiveTitle: String { confirmArchive?.column == .running ? "Stop and archive?" : "Archive this card?" }
+
+    private var archiveBinding: Binding<Bool> {
+        Binding(get: { confirmArchive != nil }, set: { if !$0 { confirmArchive = nil } })
+    }
+
+    private func laneKey(of card: BoardCard) -> String {
+        ProjectLane.key(for: card.session, agents: vm.agents)
+    }
+
+    @ViewBuilder
+    private func menu(for card: BoardCard) -> some View {
+        if card.column == .backlog {
+            Button { starting = card } label: { Label("Start work", systemImage: "play.fill") }
+        }
+        if card.column == .running {
+            Button { Task { await vm.stop(card) } } label: { Label("Stop run", systemImage: "stop.fill") }
+        }
+        Button { movingLane = card } label: { Label("Move to project…", systemImage: "folder") }
+        ForEach(card.tasks.filter { $0.status == .running || $0.status == .queued }) { task in
+            Button(role: .destructive) { Task { await vm.cancel(task) } } label: {
+                Label("Cancel \(task.title ?? "task")", systemImage: "xmark.circle")
+            }
+        }
+        if card.session.archived {
+            Button { Task { await vm.archive(card, archived: false) } } label: {
+                Label("Restore", systemImage: "arrow.uturn.backward")
+            }
+        } else {
+            Button(role: .destructive) { confirmArchive = card } label: {
+                Label("Archive", systemImage: "archivebox")
             }
         }
     }
@@ -209,5 +279,111 @@ struct BoardCardView: View {
 
     static func relative(_ millis: Double) -> String {
         formatter.localizedString(for: Date(timeIntervalSince1970: millis / 1000), relativeTo: Date())
+    }
+}
+
+/// "Start work" on a backlog card: the title is the ask, plus optional extra instructions.
+private struct StartCardSheet: View {
+    let title: String
+    @Binding var note: String
+    let onStart: () -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 16) {
+                Text(title).font(Theme.Font.title).foregroundStyle(Theme.text)
+                MonoField(label: "Anything to add?", placeholder: "optional", text: $note)
+                PrimaryButton(title: "Start") { onStart(); dismiss() }
+                Spacer()
+            }
+            .padding(16)
+            .background(Theme.bg)
+            .navigationTitle("Start work")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Cancel") { dismiss() } } }
+        }
+        .presentationDetents([.medium])
+    }
+}
+
+/// Move a card to another project lane, or type a new one.
+private struct LanePickerSheet: View {
+    let lanes: [String]
+    let current: String
+    let onPick: (String) -> Void
+    @State private var newLane = ""
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ForEach(lanes, id: \.self) { lane in
+                        Button { onPick(lane); dismiss() } label: {
+                            HStack {
+                                Text(lane).foregroundStyle(Theme.text)
+                                Spacer()
+                                if lane == current { Image(systemName: "checkmark").foregroundStyle(Theme.accent) }
+                            }
+                        }
+                    }
+                }
+                Section("New project") {
+                    MonoField(label: "Name", placeholder: "Website redesign", text: $newLane)
+                    PrimaryButton(title: "Move here", disabled: newLane.trimmingCharacters(in: .whitespaces).isEmpty) {
+                        onPick(newLane.trimmingCharacters(in: .whitespaces)); dismiss()
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(Theme.bg)
+            .navigationTitle("Move to project")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Cancel") { dismiss() } } }
+        }
+        .presentationDetents([.medium, .large])
+    }
+}
+
+/// A new card. It lands in Backlog until someone starts it.
+private struct NewTaskSheet: View {
+    let agents: [AgentSummary]
+    let lanes: [String]
+    let onCreate: (String, String, String?) -> Void
+    @State private var title = ""
+    @State private var agentId = ""
+    @State private var lane = ""
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 16) {
+                MonoField(label: "Task", placeholder: "Audit the keychain code", text: $title)
+                Picker("Agent", selection: $agentId) {
+                    ForEach(agents) { agent in Text(agent.displayName).tag(agent.id) }
+                }
+                .pickerStyle(.menu)
+                .tint(Theme.accent)
+                Picker("Project", selection: $lane) {
+                    Text("None").tag("")
+                    ForEach(lanes, id: \.self) { Text($0).tag($0) }
+                }
+                .pickerStyle(.menu)
+                .tint(Theme.accent)
+                PrimaryButton(title: "Create", disabled: title.trimmingCharacters(in: .whitespaces).isEmpty) {
+                    onCreate(title.trimmingCharacters(in: .whitespaces), agentId, lane.isEmpty ? nil : lane)
+                    dismiss()
+                }
+                Spacer()
+            }
+            .padding(16)
+            .background(Theme.bg)
+            .navigationTitle("New task")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Cancel") { dismiss() } } }
+            .onAppear { if agentId.isEmpty { agentId = agents.first?.id ?? "main" } }
+        }
+        .presentationDetents([.medium])
     }
 }
