@@ -4,8 +4,12 @@ Compiled from `designs/2026-09-07-app-completion-prd.md`. House style follows
 `designs/2026-09-06-dev-suite-loop.md` (the predecessor); nothing here contradicts it.
 
 ```
-/ralph-loop "Read designs/2026-09-07-app-completion-loop.md and keep executing unchecked checklist items. HOST=<wss://your-gateway or 'offline'>. Stop only when the completion promise is literally true" --max-iterations 120 --completion-promise "OPENCLAW V1 COMPLETE"
+/ralph-loop "Read designs/2026-09-07-app-completion-loop.md and keep executing unchecked checklist items. HOST=wss://REPLACE-ME.trycloudflare.com Stop only when the completion promise is literally true" --max-iterations 120 --completion-promise "OPENCLAW V1 COMPLETE"
 ```
+
+Replace `wss://REPLACE-ME.trycloudflare.com` with the real gateway URL. **No angle brackets** —
+the shell reads `<url>` as a file redirect and the command dies before the loop starts. Keep the
+whole prompt inside one balanced pair of double quotes.
 
 **Summary (5 lines)**
 1. Take the app from v0.2.0.0 to a v1.0 a stranger can install, pair, and use, in milestones M0→M5.
