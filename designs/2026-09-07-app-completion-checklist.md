@@ -71,7 +71,28 @@ Legend: [ ] todo · [x] done (evidence required) · [H] human checkpoint (never 
 - [ ] P7.3 FINAL GATE: C1 exit 0 with `Executed N` ≥ BASELINE_TESTS; C3 + C4 empty; every fixture is a live capture; all screenshots present. Then summarize with **PENDING FOR HUMAN** listing P1.H, P2.H, P3.H, P4.H, P6.H verbatim, and output: OPENCLAW V1 COMPLETE
 
 ## QUESTIONS
-(none yet)
+
+### 2026-09-07 — P5.0 blocked: no gateway host
+
+The loop finished every offline phase (P1–P4, 23 items, 201 tests) and reached P5, which
+cannot start without a live gateway. Two things are needed:
+
+1. **The gateway URL.** `tools/.phase0-device.json` has the paired identity (deviceToken +
+   Ed25519 key) but no host, and nothing in the repo records one. Restart the loop with it:
+
+   ```
+   /ralph-loop "Read designs/2026-09-07-app-completion-loop.md and keep executing unchecked checklist items. HOST=wss://your-real-host.trycloudflare.com Stop only when the completion promise is literally true" --max-iterations 120 --completion-promise "OPENCLAW V1 COMPLETE"
+   ```
+
+   No angle brackets around the URL — the shell reads `<url>` as a redirect.
+
+2. **Approval for the mutating probes.** P5.6–P5.9 create a throwaway session labelled
+   `v1-probe-2026-09-07`, send it a 1-pixel PNG, archive and unarchive it, abort its run,
+   and cancel a task. The session stays archived on the gateway afterwards.
+
+Also still open and needing a person: **P7, the two-device fan-in**, which needs a second
+paired device that does not exist yet. Cutting P7 is the human's call, not the loop's.
+
 
 ## BLOCKED
 (none yet)
