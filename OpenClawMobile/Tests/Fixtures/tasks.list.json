@@ -1,0 +1,57 @@
+{
+  "tasks": [
+    {
+      "taskId": "t-0001",
+      "runtime": "subagent",
+      "status": "running",
+      "title": "Resize helper",
+      "agentId": "main",
+      "sessionKey": "agent:main:task-attach",
+      "childSessionKey": "agent:main:task-attach:sub-1",
+      "createdAt": 1788804050000,
+      "updatedAt": 1788804100000,
+      "startedAt": 1788804050000,
+      "toolUseCount": 7,
+      "lastToolName": "Edit",
+      "progressSummary": "Rewriting ImageReencoder.jpeg",
+      "diffStat": { "files": 2, "added": 41, "removed": 8 }
+    },
+    {
+      "taskId": "t-0002",
+      "runtime": "cli",
+      "status": "completed",
+      "title": "Run the test suite",
+      "agentId": "main",
+      "sessionKey": "agent:main:task-attach",
+      "createdAt": 1788803800000,
+      "updatedAt": 1788803900000,
+      "endedAt": 1788803900000,
+      "terminalOutcome": "success",
+      "terminalSummary": "130 tests, 0 failures"
+    },
+    {
+      "taskId": "t-0003",
+      "runtime": "cron",
+      "status": "failed",
+      "title": "Nightly protocol probe",
+      "agentId": "main",
+      "sessionKey": "agent:main:task-migrate",
+      "createdAt": 1788803000000,
+      "updatedAt": 1788803100000,
+      "endedAt": 1788803100000,
+      "terminalOutcome": "error",
+      "error": "connect ECONNREFUSED",
+      "deliveryStatus": "blocked"
+    },
+    {
+      "taskId": "t-0004",
+      "runtime": "acp",
+      "status": "queued",
+      "title": "Draft the pricing table",
+      "agentId": "writer",
+      "sessionKey": "agent:writer:pricing-page",
+      "createdAt": 1788801500000,
+      "updatedAt": 1788801500000
+    }
+  ]
+}

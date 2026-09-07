@@ -45,12 +45,24 @@ protocol SyncSource: Sendable {
     /// Live tool calls for ONE session (`session.tool` frames → `ToolEvent`). Default: none.
     func toolEvents(sessionKey: String) -> AsyncStream<ToolEvent>
 
+    /// Every session the gateway knows about (`sessions.list`, operator.read) — the Board's rows.
+    func listSessions() async throws -> [SessionSummary]
+
+    /// The background task ledger (`tasks.list`, operator.read) — a card's sub-tasks.
+    func listTasks() async throws -> [TaskSummary]
+
+    /// Ticks when the session index changes (`sessions.changed`), so the Board can re-read.
+    func sessionChanges() -> AsyncStream<Void>
+
     /// The runId of every run that ends in ONE session (`chat` final|aborted|error, lifecycle
     /// end|error). Lets a thread clear Stop for exactly the run that finished. Default: none.
     func runEnds(sessionKey: String) -> AsyncStream<String>
 }
 
 extension SyncSource {
+    func listSessions() async throws -> [SessionSummary] { [] }
+    func listTasks() async throws -> [TaskSummary] { [] }
+    func sessionChanges() -> AsyncStream<Void> { AsyncStream { $0.finish() } }
     func toolEvents(sessionKey: String) -> AsyncStream<ToolEvent> { AsyncStream { $0.finish() } }
     func runEnds(sessionKey: String) -> AsyncStream<String> { AsyncStream { $0.finish() } }
 }
@@ -102,6 +114,10 @@ struct DemoSyncSource: SyncSource {
     func activityStream(sessionKey: String) -> AsyncStream<AgentActivity> {
         AsyncStream { $0.finish() } // demo agents have no live activity
     }
+
+    /// A canned board so the Board tab renders (and screenshots) with no gateway.
+    func listSessions() async throws -> [SessionSummary] { DemoBoard.sessions }
+    func listTasks() async throws -> [TaskSummary] { DemoBoard.tasks }
 
     /// Demo replies come from `GatewayClient.demoStream`; there is no gateway to ack.
     func send(sessionKey: String, agentId: String, text: String, idempotencyKey: String,

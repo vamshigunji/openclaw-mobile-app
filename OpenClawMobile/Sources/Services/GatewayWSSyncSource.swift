@@ -189,6 +189,34 @@ struct GatewayWSSyncSource: SyncSource {
         }
     }
 
+    /// `sessions.list` — every session row the board draws from.
+    func listSessions() async throws -> [SessionSummary] {
+        let env = try await connection.request(
+            method: "sessions.list",
+            params: ["includeDerivedTitles": true, "includeLastMessage": true, "limit": 200])
+        return env.payload?.sessions ?? []
+    }
+
+    /// `tasks.list` — the background task ledger.
+    func listTasks() async throws -> [TaskSummary] {
+        let env = try await connection.request(method: "tasks.list", params: [:])
+        return env.payload?.tasks ?? []
+    }
+
+    /// One tick per `sessions.changed` broadcast.
+    func sessionChanges() -> AsyncStream<Void> {
+        AsyncStream { continuation in
+            let task = Task {
+                for await env in await connection.events() {
+                    if Task.isCancelled { break }
+                    if env.eventKind == "sessions.changed" { continuation.yield(()) }
+                }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
     /// runIds of runs that ended in this session — `chat` final|aborted|error or a lifecycle
     /// end|error frame — so the thread clears Stop only for the run that actually finished.
     func runEnds(sessionKey: String) -> AsyncStream<String> {
@@ -359,6 +387,9 @@ struct InboundEnvelope: Decodable {
         var agentId: String?          // which agent this event belongs to (routing)
         // activity signals (agent / session.tool events)
         var data: EventData?
+        // sessions.list / tasks.list rows — decoded by the Board from their own models
+        var sessions: [SessionSummary]?
+        var tasks: [TaskSummary]?
         // agents.list result
         var agents: [AgentSummary]?
         var defaultId: String?
