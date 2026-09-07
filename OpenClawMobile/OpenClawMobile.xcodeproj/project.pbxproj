@@ -47,6 +47,7 @@
 		A8B2E74993D97B5A8DC96AA1 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7666FC619A47E52D385996B /* AppModel.swift */; };
 		A96870442B00A92FF4654E64 /* ToolTimeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F0B58E26DA1D5EADB817DFC /* ToolTimeline.swift */; };
 		A973DA2BC1EEC55F78447165 /* ChatStopRetryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A379365F019206C1A61C4465 /* ChatStopRetryTests.swift */; };
+		B14E89FC1B0A8F347356FB2E /* ChatViewModelLifecycleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A48A5BA3AF30EDF3EBB13752 /* ChatViewModelLifecycleTests.swift */; };
 		B442C8F234BE06083FC66B54 /* SpeechDictationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB94CDEB4DE1875FF0683C /* SpeechDictationTests.swift */; };
 		B836F72C72E63A34B2F13EDA /* GatewayWSSyncSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF906440FA91E8C53FAAE01A /* GatewayWSSyncSource.swift */; };
 		BA74F89935A6DAF83B790B18 /* AgentProfileViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C33EBA2E150757D365EF56E /* AgentProfileViewModel.swift */; };
@@ -117,6 +118,7 @@
 		9EA1B0EDCEF6A53D829A1211 /* ChatThreadTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatThreadTests.swift; sourceTree = "<group>"; };
 		9ED68AA2879E7319E947F4A7 /* ChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModel.swift; sourceTree = "<group>"; };
 		A379365F019206C1A61C4465 /* ChatStopRetryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatStopRetryTests.swift; sourceTree = "<group>"; };
+		A48A5BA3AF30EDF3EBB13752 /* ChatViewModelLifecycleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModelLifecycleTests.swift; sourceTree = "<group>"; };
 		A809D8D565CB020D6C917CBE /* MainAgentTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainAgentTask.swift; sourceTree = "<group>"; };
 		BA5D31A3265B04D46AC1E06C /* AgentActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentActivity.swift; sourceTree = "<group>"; };
 		BF906440FA91E8C53FAAE01A /* GatewayWSSyncSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GatewayWSSyncSource.swift; sourceTree = "<group>"; };
@@ -226,6 +228,7 @@
 				C67B03251A36A95F57BEA09D /* AttachmentSendTests.swift */,
 				A379365F019206C1A61C4465 /* ChatStopRetryTests.swift */,
 				9EA1B0EDCEF6A53D829A1211 /* ChatThreadTests.swift */,
+				A48A5BA3AF30EDF3EBB13752 /* ChatViewModelLifecycleTests.swift */,
 				2EA8E2AB3274760009434B5A /* ConnectFrameTests.swift */,
 				0120B894A9B37BBE723C6DE5 /* CreateAgentTests.swift */,
 				CB392278ADB6FAB5315400BA /* DesignSystemTests.swift */,
@@ -403,6 +406,7 @@
 				DFE2D21D7C7B6E3710B3A39B /* AttachmentSendTests.swift in Sources */,
 				A973DA2BC1EEC55F78447165 /* ChatStopRetryTests.swift in Sources */,
 				080482BA6A0A88E911BFEF03 /* ChatThreadTests.swift in Sources */,
+				B14E89FC1B0A8F347356FB2E /* ChatViewModelLifecycleTests.swift in Sources */,
 				A7A0E82B0B99D77C4D90AD00 /* ConnectFrameTests.swift in Sources */,
 				F7BAA207D1A9FD01B5C28D28 /* CreateAgentTests.swift in Sources */,
 				99EFE38B7D95C3EE7C69A29D /* DesignSystemTests.swift in Sources */,
@@ -560,7 +564,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.2.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -644,7 +648,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.2.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;

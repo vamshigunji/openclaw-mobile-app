@@ -4,7 +4,7 @@ import Foundation
 /// Line-based: a line starting with ``` opens a fence (optional language after it); a line
 /// that is exactly ``` closes it. Fence lines own their line terminators, so prose bodies
 /// come out clean. An unclosed fence (streaming) is still code. `raw` slices reassemble
-/// the input exactly.
+/// the input exactly; bodies are CRLF-normalized (Windows-authored files paste in fine).
 enum MessageSegmenter {
     struct Segment: Equatable {
         enum Kind: Equatable {
@@ -28,21 +28,21 @@ enum MessageSegmenter {
 
         func flushProse() {
             guard !prose.isEmpty else { return }
-            result.append(Segment(kind: .prose, body: prose.trimmingCharacters(in: .newlines), raw: prose))
+            result.append(Segment(kind: .prose, body: normalized(prose).trimmingCharacters(in: .newlines), raw: prose))
             prose = ""
         }
         func flushCode() {
-            var body = codeBody
+            var body = normalized(codeBody)
             if body.hasSuffix("\n") { body.removeLast() }
             result.append(Segment(kind: .code(lang: lang), body: body, raw: codeRaw))
             codeRaw = ""; codeBody = ""; lang = nil; inCode = false
         }
 
-        // Keep each newline attached to its line so raw slices stay exact.
-        let pieces = text.split(separator: "\n", omittingEmptySubsequences: false)
-        for (i, piece) in pieces.enumerated() {
-            let line = String(piece) + (i == pieces.count - 1 ? "" : "\n")
-            let content = piece.trimmingCharacters(in: .whitespaces)
+        // Walk lines by hand: Swift treats "\r\n" as ONE Character, so splitting on "\n"
+        // would never split CRLF text. Each line keeps its own terminator so raw stays exact.
+        for (piece, terminator) in lines(of: text) {
+            let line = String(piece) + String(terminator)
+            let content = piece.trimmingCharacters(in: .whitespacesAndNewlines)
             if inCode {
                 codeRaw += line
                 if content == "```" { flushCode() } else { codeBody += line }
@@ -58,5 +58,30 @@ enum MessageSegmenter {
         }
         if inCode { flushCode() } else { flushProse() }
         return result
+    }
+
+    /// (body, terminator) pairs; the last pair's terminator is empty.
+    private static func lines(of text: String) -> [(Substring, Substring)] {
+        var result: [(Substring, Substring)] = []
+        var start = text.startIndex
+        var i = text.startIndex
+        while i < text.endIndex {
+            let ch = text[i]
+            if ch == "\n" || ch == "\r\n" || ch == "\r" {
+                let next = text.index(after: i)
+                result.append((text[start..<i], text[i..<next]))
+                start = next
+                i = next
+            } else {
+                i = text.index(after: i)
+            }
+        }
+        result.append((text[start..<text.endIndex], text[text.endIndex..<text.endIndex]))
+        return result
+    }
+
+    /// CRLF/CR → LF. (No `contains("\r")` guard: "\r\n" is one Character and never matches a lone CR.)
+    private static func normalized(_ s: String) -> String {
+        s.replacingOccurrences(of: "\r\n", with: "\n").replacingOccurrences(of: "\r", with: "\n")
     }
 }

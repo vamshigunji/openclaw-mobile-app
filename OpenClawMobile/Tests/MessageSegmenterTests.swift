@@ -64,6 +64,16 @@ final class MessageSegmenterTests: XCTestCase {
         assertRoundTrip(input)
     }
 
+    func testCRLFFencesCloseAndBodiesAreNormalized() {
+        let input = "Windows file:\r\n```yaml\r\nkey: value\r\n```\r\ndone\r\n"
+        let segments = MessageSegmenter.segments(input)
+        XCTAssertEqual(kinds(segments), [.prose, .code(lang: "yaml"), .prose])
+        XCTAssertEqual(segments[0].body, "Windows file:")
+        XCTAssertEqual(segments[1].body, "key: value")
+        XCTAssertEqual(segments[2].body, "done")
+        assertRoundTrip(input)
+    }
+
     func testFenceOpenedButEmptyWhileStreaming() {
         let input = "```swift\n"
         let segments = MessageSegmenter.segments(input)

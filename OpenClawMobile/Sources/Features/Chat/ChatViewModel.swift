@@ -29,15 +29,24 @@ final class ChatViewModel {
     private let settings: SettingsStore
     /// Shared multi-agent connection (one socket for all agents), behind the seam.
     private let sync: SyncSource
-    private var subscription: Task<Void, Never>?
-    private var activityTask: Task<Void, Never>?
-    private var toolTask: Task<Void, Never>?
-    private var runEndTask: Task<Void, Never>?
+    @ObservationIgnored private var subscription: Task<Void, Never>?
+    @ObservationIgnored private var activityTask: Task<Void, Never>?
+    @ObservationIgnored private var toolTask: Task<Void, Never>?
+    @ObservationIgnored private var runEndTask: Task<Void, Never>?
     /// Idempotency keys already rendered locally — used to drop the gateway's echo of
     /// our own sends (PRD-handshake P3 self-echo → no double-render).
     private var seenKeys: Set<String> = []
     // ponytail: protocol defaults; wire the hello-ok policy if a probe ever shows different limits.
     private let attachmentPolicy = AttachmentPolicy.default
+
+    deinit {
+        // Views create one view model per push; without this every closed thread would keep
+        // four live event loops registered on the shared connection.
+        subscription?.cancel()
+        activityTask?.cancel()
+        toolTask?.cancel()
+        runEndTask?.cancel()
+    }
 
     init(thread: ChatThread, sync: SyncSource, settings: SettingsStore) {
         self.thread = thread
@@ -234,10 +243,11 @@ final class ChatViewModel {
 
     private func subscribeToPeers() {
         subscription?.cancel()
-        subscription = Task { [key = thread.sessionKey] in
+        subscription = Task { [weak self, sync, key = thread.sessionKey] in
             do {
                 for try await message in sync.subscribe(sessionKey: key) {
-                    ingest(remote: message)
+                    guard let self else { break }
+                    self.ingest(remote: message)
                 }
             } catch {
                 // Subscription ended/failed; v1 does not auto-retry (see loop notes).
@@ -247,11 +257,11 @@ final class ChatViewModel {
 
     private func subscribeToActivity() {
         activityTask?.cancel()
-        activityTask = Task { [key = thread.sessionKey] in
+        activityTask = Task { [weak self, sync, key = thread.sessionKey] in
             for await a in sync.activityStream(sessionKey: key) {
-                if Task.isCancelled { break }
-                activity = a
-                if a == .idle { timeline.closeAll() } // lifecycle end / chat final|aborted|error
+                guard let self, !Task.isCancelled else { break }
+                self.activity = a
+                if a == .idle { self.timeline.closeAll() } // lifecycle end / chat final|aborted|error
             }
         }
     }
@@ -260,20 +270,20 @@ final class ChatViewModel {
     /// earlier run must not disarm a newer one.
     private func subscribeToRunEnds() {
         runEndTask?.cancel()
-        runEndTask = Task { [key = thread.sessionKey] in
+        runEndTask = Task { [weak self, sync, key = thread.sessionKey] in
             for await runId in sync.runEnds(sessionKey: key) {
-                if Task.isCancelled { break }
-                if runId == activeRunId { activeRunId = nil }
+                guard let self, !Task.isCancelled else { break }
+                if runId == self.activeRunId { self.activeRunId = nil }
             }
         }
     }
 
     private func subscribeToTools() {
         toolTask?.cancel()
-        toolTask = Task { [key = thread.sessionKey] in
+        toolTask = Task { [weak self, sync, key = thread.sessionKey] in
             for await event in sync.toolEvents(sessionKey: key) {
-                if Task.isCancelled { break }
-                timeline.apply(event)
+                guard let self, !Task.isCancelled else { break }
+                self.timeline.apply(event)
             }
         }
     }
