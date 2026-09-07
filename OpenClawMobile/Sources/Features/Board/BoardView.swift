@@ -21,6 +21,14 @@ struct BoardView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 columnPicker
+                if !vm.isConnected {
+                    Label("Reconnecting… showing the last known board", systemImage: "wifi.slash")
+                        .font(Theme.Font.caption)
+                        .foregroundStyle(Theme.warn)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 8)
+                }
                 if let error = vm.error {
                     Label(error, systemImage: AgentStatus.failed.symbol)
                         .font(Theme.Font.caption)

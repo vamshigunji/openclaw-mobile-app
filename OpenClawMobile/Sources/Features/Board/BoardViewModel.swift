@@ -12,19 +12,25 @@ final class BoardViewModel {
     var agentFilter: String? { didSet { rebuild() } }
     /// Agents seen on the board, for the filter menu.
     private(set) var agents: [AgentSummary] = []
+    /// False while the socket is down — the Board says so rather than showing stale rows as live.
+    private(set) var isConnected = true
 
     private let sync: SyncSource
     private let isConfigured: Bool
     private var sessions: [SessionSummary] = []
     private var tasks: [TaskSummary] = []
     @ObservationIgnored private var watchTask: Task<Void, Never>?
+    @ObservationIgnored private var stateTask: Task<Void, Never>?
 
     init(sync: SyncSource, isConfigured: Bool) {
         self.sync = sync
         self.isConfigured = isConfigured
     }
 
-    deinit { watchTask?.cancel() }
+    deinit {
+        watchTask?.cancel()
+        stateTask?.cancel()
+    }
 
     /// Load once, then follow `sessions.changed`.
     func start() {
@@ -36,6 +42,20 @@ final class BoardViewModel {
                 await self.load()
             }
         }
+        stateTask?.cancel()
+        stateTask = Task { [weak self, sync] in
+            for await up in sync.connectionState() {
+                guard let self, !Task.isCancelled else { break }
+                let wasConnected = self.isConnected
+                self.isConnected = up
+                if up, !wasConnected { await self.load() }   // re-read what we missed
+            }
+        }
+    }
+
+    /// Re-read after the app comes back to the foreground (iOS suspends the socket).
+    func refreshOnForeground() async {
+        await load()
     }
 
     func load() async {

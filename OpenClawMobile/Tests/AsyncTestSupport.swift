@@ -3,6 +3,17 @@ import XCTest
 
 extension XCTestCase {
     /// Polls `condition` on the main actor until it holds or `timeout` elapses.
+    /// Async variant: the condition may itself await (e.g. re-loading a view model).
+    @MainActor
+    func waitUntil(_ timeout: Duration = .seconds(10), _ condition: @MainActor () async -> Bool) async -> Bool {
+        let deadline = ContinuousClock.now + timeout
+        while ContinuousClock.now < deadline {
+            if await condition() { return true }
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+        return await condition()
+    }
+
     @MainActor
     func waitUntil(_ timeout: Duration = .seconds(10), _ condition: @MainActor () -> Bool) async -> Bool {
         let deadline = ContinuousClock.now + timeout

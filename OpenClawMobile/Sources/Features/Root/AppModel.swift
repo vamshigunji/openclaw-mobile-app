@@ -16,6 +16,13 @@ final class AppModel {
         self.sync = Self.makeSync(settings)
     }
 
+    /// Foreground refresh: the shared connection reconnects on demand, and each screen's
+    /// own connection-state subscription re-reads once it is back up.
+    func refreshOnForeground() {
+        guard settings.isConfigured else { return }
+        Task { _ = try? await sync.listAgents() }   // cheapest call that revives the socket
+    }
+
     /// Call after pairing / host change to point every agent at the new gateway.
     func rebuildConnection() {
         sync = Self.makeSync(settings)

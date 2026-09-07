@@ -51,6 +51,7 @@ struct GatewayWSSyncSource: SyncSource {
     private let connection: GatewayConnection
 
     init(host: String, auth: GatewayFrames.Auth, identity: DeviceIdentity,
+         reconnectBaseDelay: Duration = .seconds(1),
          onDeviceToken: (@Sendable (String) -> Void)? = nil) {
         self.host = host
         self.auth = auth
@@ -58,6 +59,7 @@ struct GatewayWSSyncSource: SyncSource {
         self.onDeviceToken = onDeviceToken
         self.connection = GatewayConnection(host: host, auth: auth,
                                             identity: identity,
+                                            reconnectBaseDelay: reconnectBaseDelay,
                                             onDeviceToken: onDeviceToken)
     }
 
@@ -210,6 +212,20 @@ struct GatewayWSSyncSource: SyncSource {
                 for await env in await connection.events() {
                     if Task.isCancelled { break }
                     if env.eventKind == "sessions.changed" { continuation.yield(()) }
+                }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    /// Whether the shared socket is up right now.
+    func connectionState() -> AsyncStream<Bool> {
+        AsyncStream { continuation in
+            let task = Task {
+                for await up in await connection.connectionState() {
+                    if Task.isCancelled { break }
+                    continuation.yield(up)
                 }
                 continuation.finish()
             }

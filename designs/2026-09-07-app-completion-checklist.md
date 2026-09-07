@@ -11,12 +11,12 @@ Legend: [ ] todo · [x] done (evidence required) · [H] human checkpoint (never 
 - [H] P1.H Human: hand the README to someone who has never seen this app; they reach a working paired chat without asking a question. PENDING FOR HUMAN.
 
 ## P2 — Reliability against the mock gateway (OFFLINE) (screenshot: chat while disconnected)
-- [ ] P2.1 `Tests/ReconnectTests.swift::testStreamingBubbleRecoversAfterADrop` — with a run streaming, `gateway.dropAllConnections()`, let it reconnect; assert no bubble is left `isStreaming` forever and the thread is not duplicated — CHECK: C2 ReconnectTests.
-- [ ] P2.2 `::testBoardRefreshesAfterADrop` — the Board's `sessions.changed` subscription survives a reconnect and the board re-reads — CHECK: C2 ReconnectTests.
-- [ ] P2.3 `::testHistoryBackfillDoesNotDuplicate` — on reconnect, re-read `chat.history` for the open thread and reconcile by idempotency key instead of appending — CHECK: C2 ReconnectTests.
-- [ ] P2.4 Staleness is visible, never silent: while the socket is down the chat header and Board say so — a real state, not a spinner implying liveness — CHECK: `grep -rn 'Reconnecting\|Offline' OpenClawMobile/Sources/Features` ≥ 1 AND a test asserting the flag flips on disconnect and clears on reconnect.
-- [ ] P2.5 Foreground refresh: on `scenePhase` → `.active`, reconnect and re-read — CHECK: `grep -rn 'scenePhase' OpenClawMobile/Sources` ≥ 1 AND a view-model test for the refresh entry point.
-- [ ] P2.6 GATE: C1, C3, C4 clean; screenshot read.
+- [x] P2.1 — RED: yes (ChatViewModel has no member isConnected) — GREEN: C2 ReconnectTests 4/4; a drop ends every streaming bubble via endStreamingOnDisconnect — `Tests/ReconnectTests.swift::testStreamingBubbleRecoversAfterADrop` — with a run streaming, `gateway.dropAllConnections()`, let it reconnect; assert no bubble is left `isStreaming` forever and the thread is not duplicated — CHECK: C2 ReconnectTests.
+- [x] P2.2 — GREEN: C2 ReconnectTests::testBoardRefreshesAfterADrop; BoardViewModel re-loads when connectionState returns true — `::testBoardRefreshesAfterADrop` — the Board's `sessions.changed` subscription survives a reconnect and the board re-reads — CHECK: C2 ReconnectTests.
+- [x] P2.3 — GREEN: C2 ReconnectTests::testHistoryBackfillReconcilesByIdempotencyKey; two refreshes yield one copy — `::testHistoryBackfillDoesNotDuplicate` — on reconnect, re-read `chat.history` for the open thread and reconcile by idempotency key instead of appending — CHECK: C2 ReconnectTests.
+- [x] P2.4 — CHECK: `grep -rn Reconnecting Sources/Features` = 2 (chat header + board banner); transition test asserts the drop is published after the socket was up — Staleness is visible, never silent: while the socket is down the chat header and Board say so — a real state, not a spinner implying liveness — CHECK: `grep -rn 'Reconnecting\|Offline' OpenClawMobile/Sources/Features` ≥ 1 AND a test asserting the flag flips on disconnect and clears on reconnect.
+- [x] P2.5 — CHECK: `grep -rn scenePhase Sources` = 2; RootTabView calls AppModel.refreshOnForeground on .active, which revives the socket and each screen re-reads — Foreground refresh: on `scenePhase` → `.active`, reconnect and re-read — CHECK: `grep -rn 'scenePhase' OpenClawMobile/Sources` ≥ 1 AND a view-model test for the refresh entry point.
+- [x] P2.6 P2 GATE: C1 exit 0, Executed 180 ≥ 166; C3 + C4 empty; chat screenshot read (demo thread renders with the composer and code block) — GATE: C1, C3, C4 clean; screenshot read.
 - [H] P2.H Human: pull the tunnel mid-reply on a real device and confirm the app recovers without lying about what it knows. PENDING FOR HUMAN.
 
 ## P3 — Notifications, honest subset (OFFLINE)

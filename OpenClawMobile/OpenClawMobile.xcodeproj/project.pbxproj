@@ -48,6 +48,7 @@
 		84E6A0F9843126D9BBEB0241 /* WireProtocolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F74DC0253794361B0C1B0 /* WireProtocolTests.swift */; };
 		86B90A03940ACA6B389A4AA2 /* BoardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5E2A5D6285C1E1182055F9D /* BoardViewModel.swift */; };
 		882A29E7CCD62D7098ADC59E /* BoardModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C5ECB90E159EC0A55B0D069 /* BoardModel.swift */; };
+		8C54BA59CF6AF71D8DEE26ED /* ReconnectTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C9BF03436199C7250A84094 /* ReconnectTests.swift */; };
 		965DCB7162F727317F0BF400 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDFCAD324B8F99D70F30B3D0 /* KeychainService.swift */; };
 		99EFE38B7D95C3EE7C69A29D /* DesignSystemTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB392278ADB6FAB5315400BA /* DesignSystemTests.swift */; };
 		9CAF5C8CB667BDFEC7CD0D8E /* MockGateway.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4280E1F48751A928B0F9ACAF /* MockGateway.swift */; };
@@ -99,6 +100,7 @@
 		06435B4A733ABE8D2A4602BE /* AgentSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentSummary.swift; sourceTree = "<group>"; };
 		0A3D5A53640320021B36BAA0 /* GatewayDTOs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GatewayDTOs.swift; sourceTree = "<group>"; };
 		0A8EA01DB38B2CD0B5A78ADC /* OpenClawMobileTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = OpenClawMobileTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		0C9BF03436199C7250A84094 /* ReconnectTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReconnectTests.swift; sourceTree = "<group>"; };
 		127FFE12F2218085A24F1095 /* FirstRunTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunTests.swift; sourceTree = "<group>"; };
 		1C33EBA2E150757D365EF56E /* AgentProfileViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentProfileViewModel.swift; sourceTree = "<group>"; };
 		1E679ABDA2B517A0425433E5 /* AttachmentBudgetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttachmentBudgetTests.swift; sourceTree = "<group>"; };
@@ -272,6 +274,7 @@
 				32C4159A61FB3546F9E2F6F0 /* MockGatewayE2ETests.swift */,
 				BC452ED612E51999BCBF1F81 /* PairingFailureCopyTests.swift */,
 				C3944C890D9BC63414594120 /* PairingFlowTests.swift */,
+				0C9BF03436199C7250A84094 /* ReconnectTests.swift */,
 				3CAB94CDEB4DE1875FF0683C /* SpeechDictationTests.swift */,
 				71AD36B7F11D0017AA31A553 /* ToolEventTests.swift */,
 				FE7F74DC0253794361B0C1B0 /* WireProtocolTests.swift */,
@@ -499,6 +502,7 @@
 				D8C644B8A31A0F3EAA0BF3AA /* MockGatewayE2ETests.swift in Sources */,
 				338032667BDCCF6D575FB114 /* PairingFailureCopyTests.swift in Sources */,
 				5A0055EB6F828A10CCFEFE7A /* PairingFlowTests.swift in Sources */,
+				8C54BA59CF6AF71D8DEE26ED /* ReconnectTests.swift in Sources */,
 				B442C8F234BE06083FC66B54 /* SpeechDictationTests.swift in Sources */,
 				4D61FB1E3ED7DB1103293E18 /* ToolEventTests.swift in Sources */,
 				84E6A0F9843126D9BBEB0241 /* WireProtocolTests.swift in Sources */,

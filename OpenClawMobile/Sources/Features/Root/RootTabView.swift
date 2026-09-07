@@ -5,6 +5,7 @@ import SwiftUI
 struct RootTabView: View {
     @Bindable var app: AppModel
     @State private var tab = Tab.agents
+    @Environment(\.scenePhase) private var scenePhase
 
     enum Tab: Hashable { case agents, board, settings }
 
@@ -26,6 +27,11 @@ struct RootTabView: View {
         }
         .tint(Theme.accent)
         .preferredColorScheme(.dark)
+        .onChange(of: scenePhase) { _, phase in
+            // iOS suspends the socket seconds after backgrounding; coming back means
+            // reconnecting and re-reading rather than trusting what is on screen.
+            if phase == .active { app.refreshOnForeground() }
+        }
         #if DEBUG
         .onAppear {
             // QA hook: the simulator can't tap, so let a launch arg open the Board.

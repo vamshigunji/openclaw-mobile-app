@@ -24,6 +24,8 @@ final class ChatViewModel {
     private(set) var activeRunId: String?
     /// Tool calls of the current run (real `session.tool` signals only).
     private(set) var timeline = ToolTimeline()
+    /// False while the socket is down, so the header can say so instead of spinning.
+    private(set) var isConnected = true
 
     let thread: ChatThread
     private let settings: SettingsStore
@@ -33,6 +35,7 @@ final class ChatViewModel {
     @ObservationIgnored private var activityTask: Task<Void, Never>?
     @ObservationIgnored private var toolTask: Task<Void, Never>?
     @ObservationIgnored private var runEndTask: Task<Void, Never>?
+    @ObservationIgnored private var stateTask: Task<Void, Never>?
     /// Idempotency keys already rendered locally — used to drop the gateway's echo of
     /// our own sends (PRD-handshake P3 self-echo → no double-render).
     private var seenKeys: Set<String> = []
@@ -46,6 +49,7 @@ final class ChatViewModel {
         activityTask?.cancel()
         toolTask?.cancel()
         runEndTask?.cancel()
+        stateTask?.cancel()
     }
 
     init(thread: ChatThread, sync: SyncSource, settings: SettingsStore) {
@@ -67,6 +71,52 @@ final class ChatViewModel {
         subscribeToActivity()
         subscribeToTools()
         subscribeToRunEnds()
+        subscribeToConnectionState()
+    }
+
+    /// Watch the transport. A drop ends any streaming bubble (its run is gone with the
+    /// socket) and marks the thread stale; a reconnect backfills what was missed.
+    private func subscribeToConnectionState() {
+        stateTask?.cancel()
+        stateTask = Task { [weak self, sync] in
+            for await up in sync.connectionState() {
+                guard let self, !Task.isCancelled else { break }
+                let wasConnected = self.isConnected
+                self.isConnected = up
+                if !up {
+                    self.endStreamingOnDisconnect()
+                } else if !wasConnected {
+                    await self.refreshAfterReconnect()
+                }
+            }
+        }
+    }
+
+    /// A run cannot survive the socket that was carrying it.
+    private func endStreamingOnDisconnect() {
+        activeRunId = nil
+        isStreaming = false
+        timeline.closeAll()
+        for idx in messages.indices where messages[idx].isStreaming {
+            messages[idx].isStreaming = false
+        }
+    }
+
+    /// Re-read history after a reconnect and reconcile by idempotency key, so replayed
+    /// turns update in place instead of appending a second copy.
+    func refreshAfterReconnect() async {
+        guard let history = try? await sync.loadHistory(sessionKey: thread.sessionKey,
+                                                        agentId: thread.agentId) else { return }
+        for message in history {
+            guard let key = message.clientMessageId else { continue }
+            if let idx = messages.firstIndex(where: { $0.clientMessageId == key }) {
+                messages[idx].text = message.text
+                messages[idx].isStreaming = false
+            } else {
+                seenKeys.insert(key)
+                messages.append(message)
+            }
+        }
     }
 
     /// Sending is blocked while a run is active: the button is Stop until the run ends

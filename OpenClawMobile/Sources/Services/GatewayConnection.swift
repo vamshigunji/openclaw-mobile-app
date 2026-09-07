@@ -28,6 +28,8 @@ actor GatewayConnection {
     private var nextId = 0
     private var pending: [String: CheckedContinuation<InboundEnvelope, Error>] = [:]
     private var eventSubs: [UUID: AsyncStream<InboundEnvelope>.Continuation] = [:]
+    /// Observers of "is the socket up right now" — the UI must never imply liveness it lacks.
+    private var stateSubs: [UUID: AsyncStream<Bool>.Continuation] = [:]
     private var wantsSessionSubscription = false
     private var isShutdown = false
 
@@ -96,6 +98,25 @@ actor GatewayConnection {
         }
     }
 
+    /// Live socket state: `false` the moment a read fails, `true` again after a successful
+    /// handshake. Yields the current value immediately on subscribe.
+    func connectionState() -> AsyncStream<Bool> {
+        let key = UUID()
+        return AsyncStream { cont in
+            stateSubs[key] = cont
+            cont.yield(ws != nil)
+            cont.onTermination = { _ in
+                Task { [weak self] in await self?.removeStateSub(key) }
+            }
+        }
+    }
+
+    private func removeStateSub(_ key: UUID) { stateSubs.removeValue(forKey: key) }
+
+    private func publishState(_ up: Bool) {
+        for cont in stateSubs.values { cont.yield(up) }
+    }
+
     func shutdown() {
         isShutdown = true
         reconnectTask?.cancel()
@@ -105,6 +126,9 @@ actor GatewayConnection {
         failAllPending(GatewayError.unreachable("connection shut down"))
         eventSubs.values.forEach { $0.finish() }
         eventSubs.removeAll()
+        publishState(false)
+        stateSubs.values.forEach { $0.finish() }
+        stateSubs.removeAll()
     }
 
     // MARK: - Connect / handshake
@@ -175,6 +199,7 @@ actor GatewayConnection {
                 }
                 ws = task
                 startReadLoop(task)
+                publishState(true)
                 return
             }
         }
@@ -239,6 +264,7 @@ actor GatewayConnection {
     private func handleDisconnect(_ error: Error) {
         guard ws != nil || !pending.isEmpty else { return }
         WireLog.note("disconnected: \(error.localizedDescription)")
+        publishState(false)
         ws?.cancel(with: .goingAway, reason: nil)
         ws = nil
         readTask = nil

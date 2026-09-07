@@ -45,7 +45,15 @@ struct ChatView: View {
                             Image(systemName: "chevron.right")
                                 .font(.caption2).foregroundStyle(Theme.textMuted)
                         }
-                        ActivityLine(activity: vm.activity)
+                        Group {
+                            if vm.isConnected {
+                                ActivityLine(activity: vm.activity)
+                            } else {
+                                Label("Reconnecting…", systemImage: "wifi.slash")
+                                    .font(Theme.Font.caption)
+                                    .foregroundStyle(Theme.warn)
+                            }
+                        }
                     }
                 }
                 .buttonStyle(.plain)
