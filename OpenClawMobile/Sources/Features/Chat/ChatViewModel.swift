@@ -15,6 +15,8 @@ final class ChatViewModel {
     var attachmentHint: String?
     /// Mic button runtime (design §4.3).
     let dictation = SpeechDictation()
+    /// Tells the user when a run finishes while they are elsewhere in the app.
+    @ObservationIgnored private let notifier = RunNotifier()
     /// A send is in flight (ack not yet received).
     var isStreaming: Bool = false
     /// Live "what is the agent doing" signal, mapped from real gateway events.
@@ -39,8 +41,9 @@ final class ChatViewModel {
     /// Idempotency keys already rendered locally — used to drop the gateway's echo of
     /// our own sends (PRD-handshake P3 self-echo → no double-render).
     private var seenKeys: Set<String> = []
-    // ponytail: protocol defaults; wire the hello-ok policy if a probe ever shows different limits.
-    private let attachmentPolicy = AttachmentPolicy.default
+    /// Starts at the documented defaults and is replaced by whatever the gateway advertised
+    /// once the handshake lands.
+    private var attachmentPolicy = AttachmentPolicy.default
 
     deinit {
         // Views create one view model per push; without this every closed thread would keep
@@ -72,6 +75,14 @@ final class ChatViewModel {
         subscribeToTools()
         subscribeToRunEnds()
         subscribeToConnectionState()
+        Task { [weak self, sync] in
+            let policy = await sync.attachmentPolicy()
+            self?.attachmentPolicy = policy
+        }
+        Task { [weak self] in
+            guard let notifier = self?.notifier else { return }
+            await notifier.requestPermissionIfNeeded()
+        }
     }
 
     /// Watch the transport. A drop ends any streaming bubble (its run is gone with the
@@ -323,10 +334,27 @@ final class ChatViewModel {
         runEndTask = Task { [weak self, sync, key = thread.sessionKey] in
             for await runId in sync.runEnds(sessionKey: key) {
                 guard let self, !Task.isCancelled else { break }
-                if runId == self.activeRunId { self.activeRunId = nil }
+                if runId == self.activeRunId {
+                    self.activeRunId = nil
+                    await self.notifyRunFinished()
+                }
             }
         }
     }
+
+    /// A finished run is worth a notification only if the user is not watching this thread.
+    private func notifyRunFinished() async {
+        guard !isForeground else { return }
+        let last = messages.last { $0.role == .assistant }
+        let state = last?.aborted == true ? "aborted" : (last?.failed == true ? "error" : "final")
+        let json = #"{"type":"event","event":"chat","payload":{"sessionKey":"\#(thread.sessionKey)","state":"\#(state)"}}"#
+        guard let env = try? JSONDecoder().decode(InboundEnvelope.self, from: Data(json.utf8)),
+              let request = RunNotification.from(env, threadTitle: thread.title) else { return }
+        await notifier.post(request)
+    }
+
+    /// Set by the view: true while this thread is the visible screen.
+    var isForeground = false
 
     private func subscribeToTools() {
         toolTask?.cancel()

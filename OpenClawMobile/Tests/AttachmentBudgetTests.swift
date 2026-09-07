@@ -54,6 +54,28 @@ final class AttachmentBudgetTests: XCTestCase {
         XCTAssertEqual(ok, .ok)
     }
 
+    /// P3.4 — the gateway's advertised ceilings win over our defaults, end to end.
+    @MainActor
+    func testPolicyIsReadFromTheGatewayHandshake() async throws {
+        let gateway = MockGateway()
+        // A gateway configured smaller than our defaults: 2 MB per attachment, 1 MB per image.
+        gateway.attachmentPolicy = ["maxBytes": 2 * 1024 * 1024, "maxImageBytes": 1024 * 1024]
+        try gateway.start()
+        defer { gateway.stop() }
+
+        let sync = GatewayWSSyncSource(host: gateway.wsHost, auth: .token("mock-device-token-1"),
+                                       identity: DeviceIdentity())
+        _ = try await sync.listAgents()          // forces the handshake
+        let policy = await sync.attachmentPolicy()
+
+        XCTAssertEqual(policy.maxBytes, 2 * 1024 * 1024, "the gateway's ceiling, not ours")
+        XCTAssertEqual(policy.maxImageBytes, 1024 * 1024)
+        // And the budget honors it: a 3 MB PDF is now too large where the default allowed it.
+        XCTAssertEqual(AttachmentBudget.plan(fileName: "spec.pdf", mimeType: "application/pdf",
+                                             bytes: 3 * 1024 * 1024, isImage: false, policy: policy),
+                       .tooLarge(max: 2 * 1024 * 1024))
+    }
+
     func testPolicyComesFromHelloOkFixtureWhenCaptured() throws {
         let fixture = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
             .appendingPathComponent("Fixtures/hello-ok.json")

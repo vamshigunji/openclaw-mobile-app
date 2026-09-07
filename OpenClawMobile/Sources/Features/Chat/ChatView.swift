@@ -62,10 +62,12 @@ struct ChatView: View {
         .toolbarBackground(Theme.bg, for: .navigationBar)
         .onAppear {
             vm.start()
+            vm.isForeground = true
             if ProcessInfo.processInfo.arguments.contains("--seed-demo") {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { vm.seedDemo() }
             }
         }
+        .onDisappear { vm.isForeground = false }
     }
 
     private var messageList: some View {

@@ -219,6 +219,12 @@ struct GatewayWSSyncSource: SyncSource {
         }
     }
 
+    /// The attachment ceilings this gateway advertised at handshake, or the documented
+    /// defaults when it advertised none (older gateway).
+    func attachmentPolicy() async -> AttachmentPolicy {
+        await connection.attachmentPolicy() ?? .default
+    }
+
     /// Whether the shared socket is up right now.
     func connectionState() -> AsyncStream<Bool> {
         AsyncStream { continuation in
@@ -426,6 +432,18 @@ struct InboundEnvelope: Decodable {
         var agentId: String?          // which agent this event belongs to (routing)
         // activity signals (agent / session.tool events)
         var data: EventData?
+        /// hello-ok `policy` — attachment ceilings the gateway advertises.
+        var policy: PolicyBody?
+
+        struct PolicyBody: Decodable {
+            var maxPayload: Int?
+            var attachments: Attachments?
+            struct Attachments: Decodable {
+                var maxBytes: Int?
+                var maxImageBytes: Int?
+            }
+        }
+
         // sessions.list / tasks.list rows — decoded by the Board from their own models
         var sessions: [SessionSummary]?
         var tasks: [TaskSummary]?

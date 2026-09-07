@@ -30,6 +30,8 @@ actor GatewayConnection {
     private var eventSubs: [UUID: AsyncStream<InboundEnvelope>.Continuation] = [:]
     /// Observers of "is the socket up right now" — the UI must never imply liveness it lacks.
     private var stateSubs: [UUID: AsyncStream<Bool>.Continuation] = [:]
+    /// Attachment ceilings from the latest hello-ok; nil until a handshake completes.
+    private var policy: AttachmentPolicy?
     private var wantsSessionSubscription = false
     private var isShutdown = false
 
@@ -97,6 +99,9 @@ actor GatewayConnection {
             }
         }
     }
+
+    /// What the gateway said its attachment ceilings are, if it said anything.
+    func attachmentPolicy() -> AttachmentPolicy? { policy }
 
     /// Live socket state: `false` the moment a read fails, `true` again after a successful
     /// handshake. Yields the current value immediately on subscribe.
@@ -196,6 +201,13 @@ actor GatewayConnection {
                 if let minted = env.payload?.auth?.deviceToken, !minted.isEmpty {
                     auth = .token(minted) // reconnects use the freshest token
                     onDeviceToken?(minted)
+                }
+                if let advertised = env.payload?.policy {
+                    var p = AttachmentPolicy.default
+                    if let v = advertised.maxPayload { p.maxPayload = v }
+                    if let v = advertised.attachments?.maxBytes { p.maxBytes = v }
+                    if let v = advertised.attachments?.maxImageBytes { p.maxImageBytes = v }
+                    policy = p
                 }
                 ws = task
                 startReadLoop(task)

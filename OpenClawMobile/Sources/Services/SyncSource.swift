@@ -57,6 +57,9 @@ protocol SyncSource: Sendable {
     /// Whether the transport is up. The UI shows staleness rather than implying liveness.
     func connectionState() -> AsyncStream<Bool>
 
+    /// Attachment ceilings the gateway advertised at handshake.
+    func attachmentPolicy() async -> AttachmentPolicy
+
     /// Organization-only edits to a session row (`sessions.patch`, operator.write):
     /// `archived`, `category`. `expectedSessionId` guards against a stale read.
     func patchSession(key: String, expectedSessionId: String?, fields: [String: Any]) async throws
@@ -78,6 +81,7 @@ extension SyncSource {
     func sessionChanges() -> AsyncStream<Void> { AsyncStream { $0.finish() } }
     /// Demo mode has no socket to lose.
     func connectionState() -> AsyncStream<Bool> { AsyncStream { $0.yield(true); $0.finish() } }
+    func attachmentPolicy() async -> AttachmentPolicy { .default }
     func patchSession(key: String, expectedSessionId: String?, fields: [String: Any]) async throws {}
     func createSession(agentId: String, label: String, category: String?) async throws {}
     func cancelTask(taskId: String) async throws {}

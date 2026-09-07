@@ -29,6 +29,8 @@ final class MockGateway: @unchecked Sendable {
     var tasksFixture: Data?
     /// Reject the next `sessions.patch` (rollback tests).
     var failNextPatch = false
+    /// `policy.attachments` advertised in hello-ok; nil omits the block (older gateway).
+    var attachmentPolicy: [String: Any]?
 
     // Observability
     private(set) var verifiedSignatures = 0
@@ -213,12 +215,16 @@ final class MockGateway: @unchecked Sendable {
             return
         }
 
-        respond(conn, id: id, payload: [
+        var payload: [String: Any] = [
             "auth": ["role": "operator",
                      "scopes": ["operator.read", "operator.write"],
                      "deviceToken": "mock-device-token-1"],
             "snapshot": [:], "stateVersion": 1, "seq": 1,
-        ])
+        ]
+        if let attachmentPolicy {
+            payload["policy"] = ["attachments": attachmentPolicy]
+        }
+        respond(conn, id: id, payload: payload)
     }
 
     private func verifyDeviceSignature(device: [String: Any], params: [String: Any],
