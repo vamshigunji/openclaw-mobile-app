@@ -32,6 +32,7 @@ final class ChatViewModel {
     private var subscription: Task<Void, Never>?
     private var activityTask: Task<Void, Never>?
     private var toolTask: Task<Void, Never>?
+    private var runEndTask: Task<Void, Never>?
     /// Idempotency keys already rendered locally — used to drop the gateway's echo of
     /// our own sends (PRD-handshake P3 self-echo → no double-render).
     private var seenKeys: Set<String> = []
@@ -56,10 +57,14 @@ final class ChatViewModel {
         subscribeToPeers()
         subscribeToActivity()
         subscribeToTools()
+        subscribeToRunEnds()
     }
 
+    /// Sending is blocked while a run is active: the button is Stop until the run ends
+    /// (design §4.6), so a follow-up can never overwrite the stoppable run.
     var canSend: Bool {
-        (!draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !pendingAttachments.isEmpty) && !isStreaming
+        (!draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !pendingAttachments.isEmpty)
+            && !isStreaming && activeRunId == nil
     }
 
     var canStop: Bool { activeRunId != nil }
@@ -164,6 +169,12 @@ final class ChatViewModel {
         for url in urls {
             let scoped = url.startAccessingSecurityScopedResource()
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            // Size first: never read a multi-GB pick into memory just to reject it.
+            let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+            if size > attachmentPolicy.maxBytes {
+                attachmentHint = "\(url.lastPathComponent) is over \(attachmentPolicy.maxBytes / 1_048_576) MB."
+                continue
+            }
             guard let data = try? Data(contentsOf: url) else {
                 attachmentHint = "Couldn't read \(url.lastPathComponent)."
                 continue
@@ -177,9 +188,15 @@ final class ChatViewModel {
             switch AttachmentBudget.plan(fileName: url.lastPathComponent, mimeType: mime,
                                          bytes: data.count, isImage: false, policy: attachmentPolicy) {
             case .inlineFence(let lang):
-                let fence = AttachmentBudget.fence(fileName: url.lastPathComponent, lang: lang,
-                                                   text: String(decoding: data, as: UTF8.self))
-                draft += (draft.isEmpty ? "" : "\n\n") + fence
+                let text = String(decoding: data, as: UTF8.self)
+                if text.contains("```") {
+                    // A file with its own fences would break the wrapper; attach it instead.
+                    pendingAttachments.append(Attachment(kind: .file, fileName: url.lastPathComponent,
+                                                         mimeType: mime, data: data))
+                } else {
+                    let fence = AttachmentBudget.fence(fileName: url.lastPathComponent, lang: lang, text: text)
+                    draft += (draft.isEmpty ? "" : "\n\n") + fence
+                }
                 attachmentHint = nil
             case .tooLarge(let max):
                 attachmentHint = "\(url.lastPathComponent) is over \(max / 1_048_576) MB."
@@ -234,10 +251,19 @@ final class ChatViewModel {
             for await a in sync.activityStream(sessionKey: key) {
                 if Task.isCancelled { break }
                 activity = a
-                if a == .idle { // lifecycle end / chat final|aborted|error
-                    activeRunId = nil
-                    timeline.closeAll()
-                }
+                if a == .idle { timeline.closeAll() } // lifecycle end / chat final|aborted|error
+            }
+        }
+    }
+
+    /// Clears Stop only for the run that actually ended — a late terminal frame from an
+    /// earlier run must not disarm a newer one.
+    private func subscribeToRunEnds() {
+        runEndTask?.cancel()
+        runEndTask = Task { [key = thread.sessionKey] in
+            for await runId in sync.runEnds(sessionKey: key) {
+                if Task.isCancelled { break }
+                if runId == activeRunId { activeRunId = nil }
             }
         }
     }
@@ -260,10 +286,9 @@ final class ChatViewModel {
         if let idx = messages.lastIndex(where: { $0.clientMessageId == key }) {
             // In-place update for streaming runs; duplicate echoes are dropped.
             if key.hasPrefix("chat-run:") {
-                let id = messages[idx].id
-                messages[idx] = ChatMessage(id: id, role: remote.role, text: remote.text,
-                                            isStreaming: remote.isStreaming,
-                                            clientMessageId: remote.clientMessageId)
+                // Mutate in place so aborted/failed/attachments survive later frames of the run.
+                messages[idx].text = remote.text
+                messages[idx].isStreaming = remote.isStreaming
             }
             return
         }
@@ -283,9 +308,10 @@ final class ChatViewModel {
     /// turns arrive back via `subscribe()`; the ack's runId arms Stop.
     private func deliver(text: String, attachments: [Attachment], idempotencyKey: String) async {
         // The whole frame must fit the gateway's payload limit; base64 inflates attachments.
-        if case .payloadTooLarge = AttachmentBudget.checkPayload(
+        if case .payloadTooLarge(let max) = AttachmentBudget.checkPayload(
             messageBytes: text.utf8.count, attachmentBytes: attachments.map(\.data.count),
             policy: attachmentPolicy) {
+            attachmentHint = "Message is over \(max / 1_048_576) MB with its attachments. Remove one and retry."
             markFailed(idempotencyKey)
             return
         }

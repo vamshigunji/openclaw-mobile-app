@@ -14,21 +14,10 @@ final class AttachmentSendTests: XCTestCase {
     }
 
     @MainActor
-    private func makeViewModel() throws -> (ChatViewModel, SettingsStore) {
-        let sync = GatewayWSSyncSource(host: gateway.wsHost, auth: .token("mock-device-token-1"),
-                                       identity: DeviceIdentity())
-        let settings = SettingsStore()
-        settings.host = gateway.wsHost
-        let vm = ChatViewModel(thread: .main(for: AgentSummary(id: "main")), sync: sync, settings: settings)
-        vm.start()
-        return (vm, settings)
-    }
-
-    @MainActor
     func testTwoAttachmentsMakeOneBubbleAndOneFrame() async throws {
         gateway = MockGateway(replyText: "got them")
         try gateway.start()
-        let (vm, settings) = try makeViewModel()
+        let (vm, settings) = makeChatViewModel(gateway: gateway)
         defer { settings.host = "" }
         try await Task.sleep(for: .milliseconds(500)) // let subscribe attach (CI headroom)
 
@@ -46,6 +35,7 @@ final class AttachmentSendTests: XCTestCase {
         }
         XCTAssertTrue(replied, "the mock reply (after the echo) should arrive")
 
+        XCTAssertFalse(vm.canStop, "a run that finished normally disarms Stop")
         let userBubbles = vm.messages.filter { $0.role == .user }
         XCTAssertEqual(userBubbles.count, 1, "optimistic bubble + gateway echo must not double-render")
         XCTAssertEqual(userBubbles.first?.text, "two pics")
@@ -71,7 +61,7 @@ final class AttachmentSendTests: XCTestCase {
     func testAttachmentOnlySendIsAllowed() async throws {
         gateway = MockGateway()
         try gateway.start()
-        let (vm, settings) = try makeViewModel()
+        let (vm, settings) = makeChatViewModel(gateway: gateway)
         defer { settings.host = "" }
         vm.pendingAttachments = [Attachment(kind: .file, fileName: "notes.pdf", mimeType: "application/pdf",
                                             data: Data(repeating: 1, count: 1024))]
@@ -86,7 +76,7 @@ final class AttachmentSendTests: XCTestCase {
     func testFrameOverPayloadLimitFailsLocallyWithoutSending() async throws {
         gateway = MockGateway()
         try gateway.start()
-        let (vm, settings) = try makeViewModel()
+        let (vm, settings) = makeChatViewModel(gateway: gateway)
         defer { settings.host = "" }
         vm.pendingAttachments = [Attachment(kind: .file, fileName: "big.bin", mimeType: "application/octet-stream",
                                             data: Data(count: 20 * 1024 * 1024))]
@@ -94,6 +84,7 @@ final class AttachmentSendTests: XCTestCase {
         vm.send()
         let failed = await waitUntil { vm.messages.last(where: { $0.role == .user })?.failed == true }
         XCTAssertTrue(failed, "oversized frames are rejected before send")
+        XCTAssertEqual(vm.attachmentHint?.contains("over 25 MB"), true, "the user is told why")
         XCTAssertFalse(gateway.receivedMethods.contains("chat.send"), "nothing should reach the gateway")
     }
 }

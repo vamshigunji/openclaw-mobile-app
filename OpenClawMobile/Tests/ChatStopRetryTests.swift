@@ -19,14 +19,9 @@ final class ChatStopRetryTests: XCTestCase {
         gateway = MockGateway(replyText: "a long reply that will be cut short")
         gateway.holdFinal = true // deltas arrive, the final never does → the run stays active
         try gateway.start()
-        let sync = GatewayWSSyncSource(host: gateway.wsHost, auth: .token("mock-device-token-1"),
-                                       identity: DeviceIdentity())
-        let settings = SettingsStore()
-        settings.host = gateway.wsHost
+        let (vm, settings) = makeChatViewModel(gateway: gateway)
         defer { settings.host = "" }
-        let thread = ChatThread.main(for: AgentSummary(id: "main", name: "main"))
-        let vm = ChatViewModel(thread: thread, sync: sync, settings: settings)
-        vm.start()
+        let thread = vm.thread
         try await Task.sleep(for: .milliseconds(500)) // let subscribe attach (CI headroom)
 
         vm.draft = "stop me"
@@ -34,6 +29,8 @@ final class ChatStopRetryTests: XCTestCase {
         let streaming = await waitUntil { vm.messages.contains { $0.role == .assistant && $0.isStreaming } }
         XCTAssertTrue(streaming, "expected a streaming assistant bubble before stopping")
         XCTAssertTrue(vm.canStop)
+        vm.draft = "a follow-up typed mid-run"
+        XCTAssertFalse(vm.canSend, "sending is blocked while a run is active — the button stays Stop")
 
         await vm.stop()
 
@@ -48,6 +45,77 @@ final class ChatStopRetryTests: XCTestCase {
         XCTAssertEqual(bubble?.failed, false, "…not failed")
         XCTAssertEqual(bubble?.isStreaming, false)
         XCTAssertFalse(vm.canStop)
+    }
+
+    /// Seam whose abort always fails; send acks with the idempotency key as runId.
+    private final class AbortFailsSync: SyncSource, @unchecked Sendable {
+        func listAgents() async throws -> [AgentSummary] { [] }
+        func loadInstructions(agentId: String) async throws -> String? { nil }
+        func loadHistory(sessionKey: String, agentId: String) async throws -> [ChatMessage] { [] }
+        func subscribe(sessionKey: String?) -> AsyncThrowingStream<ChatMessage, Error> { AsyncThrowingStream { $0.finish() } }
+        func activityStream(sessionKey: String) -> AsyncStream<AgentActivity> { AsyncStream { $0.finish() } }
+        func send(sessionKey: String, agentId: String, text: String, idempotencyKey: String,
+                  attachments: [Attachment]) async throws -> String? { idempotencyKey }
+        func abort(sessionKey: String, agentId: String, runId: String?) async throws {
+            throw GatewayError.unreachable("abort failed")
+        }
+    }
+
+    @MainActor
+    func testStopKeepsRunArmedWhenAbortFails() async throws {
+        let settings = SettingsStore()
+        settings.host = "wss://stub.invalid"
+        defer { settings.host = "" }
+        let vm = ChatViewModel(thread: .main(for: AgentSummary(id: "main")), sync: AbortFailsSync(), settings: settings)
+        vm.draft = "go"
+        vm.send()
+        let armed = await waitUntil { vm.canStop }
+        XCTAssertTrue(armed)
+
+        await vm.stop()
+
+        XCTAssertTrue(vm.canStop, "the run may still be going; Stop stays available")
+        XCTAssertFalse(vm.messages.contains { $0.aborted }, "nothing is marked aborted on a failed abort")
+    }
+
+    /// Seam that exposes its runEnds continuation so a test can end runs by id.
+    private final class RunEndSync: SyncSource, @unchecked Sendable {
+        var continuation: AsyncStream<String>.Continuation?
+        func listAgents() async throws -> [AgentSummary] { [] }
+        func loadInstructions(agentId: String) async throws -> String? { nil }
+        func loadHistory(sessionKey: String, agentId: String) async throws -> [ChatMessage] { [] }
+        func subscribe(sessionKey: String?) -> AsyncThrowingStream<ChatMessage, Error> { AsyncThrowingStream { $0.finish() } }
+        func activityStream(sessionKey: String) -> AsyncStream<AgentActivity> { AsyncStream { $0.finish() } }
+        func runEnds(sessionKey: String) -> AsyncStream<String> { AsyncStream { self.continuation = $0 } }
+        func send(sessionKey: String, agentId: String, text: String, idempotencyKey: String,
+                  attachments: [Attachment]) async throws -> String? { idempotencyKey }
+        func abort(sessionKey: String, agentId: String, runId: String?) async throws {}
+    }
+
+    @MainActor
+    func testRunEndOnlyDisarmsTheMatchingRun() async throws {
+        let sync = RunEndSync()
+        let settings = SettingsStore()
+        settings.host = "wss://stub.invalid"
+        defer { settings.host = "" }
+        let vm = ChatViewModel(thread: .main(for: AgentSummary(id: "main")), sync: sync, settings: settings)
+        vm.start()
+        let subscribed = await waitUntil { sync.continuation != nil }
+        XCTAssertTrue(subscribed)
+
+        vm.draft = "run"
+        vm.send()
+        let armed = await waitUntil { vm.canStop }
+        XCTAssertTrue(armed)
+        let runId = try XCTUnwrap(vm.activeRunId)
+
+        sync.continuation?.yield("some-earlier-run")
+        try await Task.sleep(for: .milliseconds(150))
+        XCTAssertTrue(vm.canStop, "a late terminal frame from another run must not disarm Stop")
+
+        sync.continuation?.yield(runId)
+        let disarmed = await waitUntil { !vm.canStop }
+        XCTAssertTrue(disarmed, "the matching runId ends the run")
     }
 
     // MARK: - Retry (P2.6)

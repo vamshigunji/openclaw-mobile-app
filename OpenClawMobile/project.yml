@@ -34,7 +34,7 @@ targets:
         NSCameraUsageDescription: "Take a photo to send to your agent, or scan the QR setup code from your gateway."
         NSPhotoLibraryUsageDescription: "Attach photos and screenshots to messages for your agents."
         NSMicrophoneUsageDescription: "Dictate messages to your agents with the microphone."
-        NSSpeechRecognitionUsageDescription: "Turn your dictation into message text on this device."
+        NSSpeechRecognitionUsageDescription: "Turn your dictation into message text. Recognition runs on this device when your language supports it; otherwise Apple's speech service processes the audio."
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.openclaw.mobile

@@ -7,8 +7,8 @@ import Foundation
 /// backed by the gateway's protocol-v4 WS RPC (`GatewayWSSyncSource`); a future
 /// Path D backs the same protocol with a backend-for-frontend without UI changes.
 ///
-/// Multi-agent: one connection carries every agent's traffic. `subscribe` filters
-/// the shared event stream to a single agent so each thread only sees its own.
+/// Multi-agent: one connection carries every agent's traffic. Every method is keyed by
+/// session (`agent:<id>:main` or a task session) so each thread only sees its own frames.
 ///
 /// Sending stays on the WS write path with a client idempotency key (see
 /// `GatewayWSSyncSource.send`). Pairing / challenge-signing is owned by
@@ -44,10 +44,15 @@ protocol SyncSource: Sendable {
 
     /// Live tool calls for ONE session (`session.tool` frames → `ToolEvent`). Default: none.
     func toolEvents(sessionKey: String) -> AsyncStream<ToolEvent>
+
+    /// The runId of every run that ends in ONE session (`chat` final|aborted|error, lifecycle
+    /// end|error). Lets a thread clear Stop for exactly the run that finished. Default: none.
+    func runEnds(sessionKey: String) -> AsyncStream<String>
 }
 
 extension SyncSource {
     func toolEvents(sessionKey: String) -> AsyncStream<ToolEvent> { AsyncStream { $0.finish() } }
+    func runEnds(sessionKey: String) -> AsyncStream<String> { AsyncStream { $0.finish() } }
 }
 
 /// Agent-main-thread and text-only conveniences over the session-keyed seam.

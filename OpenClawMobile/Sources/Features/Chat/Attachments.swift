@@ -72,6 +72,8 @@ enum AttachmentBudget {
     static let imageMaxEdge = 2048
     static let imageQuality = 0.8
     static let inlineTextLimit = 64 * 1024
+    /// Rough JSON envelope per attachment (type/mimeType/fileName/sizeBytes/width/height keys).
+    static let perAttachmentOverheadBytes = 200
     static let textExtensions: Set<String> = [
         "swift", "py", "js", "ts", "tsx", "jsx", "json", "yaml", "yml", "md", "txt", "log", "sh", "zsh",
         "bash", "rb", "go", "rs", "java", "kt", "c", "h", "cpp", "hpp", "m", "mm", "sql", "toml", "xml",
@@ -94,7 +96,7 @@ enum AttachmentBudget {
 
     /// base64 inflates 4/3 (+ per-attachment JSON overhead); the frame must fit `maxPayload`.
     static func checkPayload(messageBytes: Int, attachmentBytes: [Int], policy: AttachmentPolicy) -> Check {
-        let encoded = messageBytes + attachmentBytes.reduce(0) { $0 + ($1 + 2) / 3 * 4 + 200 }
+        let encoded = messageBytes + attachmentBytes.reduce(0) { $0 + ($1 + 2) / 3 * 4 + perAttachmentOverheadBytes }
         return encoded > policy.maxPayload ? .payloadTooLarge(max: policy.maxPayload) : .ok
     }
 

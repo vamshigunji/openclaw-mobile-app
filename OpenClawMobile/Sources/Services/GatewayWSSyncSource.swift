@@ -189,6 +189,26 @@ struct GatewayWSSyncSource: SyncSource {
         }
     }
 
+    /// runIds of runs that ended in this session — `chat` final|aborted|error or a lifecycle
+    /// end|error frame — so the thread clears Stop only for the run that actually finished.
+    func runEnds(sessionKey: String) -> AsyncStream<String> {
+        AsyncStream { continuation in
+            let task = Task {
+                for await env in await connection.events() {
+                    if Task.isCancelled { break }
+                    guard env.matchesSession(sessionKey), let runId = env.payload?.runId else { continue }
+                    let chatEnded = env.eventKind == "chat"
+                        && ["final", "aborted", "error"].contains(env.payload?.state ?? "")
+                    let lifecycleEnded = env.eventKind == "agent" && env.payload?.stream == "lifecycle"
+                        && ["end", "error"].contains(env.payload?.data?.phase ?? "")
+                    if chatEnded || lifecycleEnded { continuation.yield(runId) }
+                }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
     // MARK: - Pairing
 
     /// One signed connect round-trip and close. Used by the Settings pairing flow:

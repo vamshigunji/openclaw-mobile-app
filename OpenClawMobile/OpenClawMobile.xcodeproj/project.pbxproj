@@ -34,6 +34,7 @@
 		68CF91BA23EA75CD753E1782 /* GatewayConnectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DE3B8599C07C4C806FD649 /* GatewayConnectionTests.swift */; };
 		77C02AAE649ED1C554400787 /* AgentProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = D27E58580E74D71B1B998392 /* AgentProfile.swift */; };
 		7CDC88EB630BAF1F7C36723E /* CreateAgentFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3964CAA5668670554945489 /* CreateAgentFlow.swift */; };
+		7EE397B9130643A43F6C3C29 /* AttachmentIntakeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84F7BCAE455DEECCDC3DFFB5 /* AttachmentIntakeTests.swift */; };
 		80F7B67760550DDFE8DDFE1B /* AsyncTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD1ADD8374299BF2BBE4324C /* AsyncTestSupport.swift */; };
 		822F008346A5750AB0466C23 /* GatewayFrames.swift in Sources */ = {isa = PBXBuildFile; fileRef = 375E69AC2F853CE81C8C0495 /* GatewayFrames.swift */; };
 		84E6A0F9843126D9BBEB0241 /* WireProtocolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F74DC0253794361B0C1B0 /* WireProtocolTests.swift */; };
@@ -105,6 +106,7 @@
 		8089D2CCBAE863CB702D3266 /* AgentRosterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentRosterTests.swift; sourceTree = "<group>"; };
 		82CF3E9C8F4E511F59CAF523 /* GatewayClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GatewayClient.swift; sourceTree = "<group>"; };
 		830CFD532EB1A2EF37CD8B30 /* AgentActivityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentActivityTests.swift; sourceTree = "<group>"; };
+		84F7BCAE455DEECCDC3DFFB5 /* AttachmentIntakeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttachmentIntakeTests.swift; sourceTree = "<group>"; };
 		871F6D60A4B50A74077F0D98 /* AgentRosterViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentRosterViewModel.swift; sourceTree = "<group>"; };
 		89FAC2B716660E999A46AE1C /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
 		921D4721CF554602FC353179 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
@@ -220,6 +222,7 @@
 				8089D2CCBAE863CB702D3266 /* AgentRosterTests.swift */,
 				CD1ADD8374299BF2BBE4324C /* AsyncTestSupport.swift */,
 				1E679ABDA2B517A0425433E5 /* AttachmentBudgetTests.swift */,
+				84F7BCAE455DEECCDC3DFFB5 /* AttachmentIntakeTests.swift */,
 				C67B03251A36A95F57BEA09D /* AttachmentSendTests.swift */,
 				A379365F019206C1A61C4465 /* ChatStopRetryTests.swift */,
 				9EA1B0EDCEF6A53D829A1211 /* ChatThreadTests.swift */,
@@ -396,6 +399,7 @@
 				FE9F9862C7247E58D8C6AB82 /* AgentRosterTests.swift in Sources */,
 				80F7B67760550DDFE8DDFE1B /* AsyncTestSupport.swift in Sources */,
 				0E43E7F9EF408049420EF005 /* AttachmentBudgetTests.swift in Sources */,
+				7EE397B9130643A43F6C3C29 /* AttachmentIntakeTests.swift in Sources */,
 				DFE2D21D7C7B6E3710B3A39B /* AttachmentSendTests.swift in Sources */,
 				A973DA2BC1EEC55F78447165 /* ChatStopRetryTests.swift in Sources */,
 				080482BA6A0A88E911BFEF03 /* ChatThreadTests.swift in Sources */,

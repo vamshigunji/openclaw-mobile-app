@@ -46,7 +46,7 @@ struct ChatInputBar: View {
                     )
                     .onSubmit(onSend)
                 micButton
-                if canStop && !canSend {
+                if canStop {
                     iconButton("stop.fill", label: "Stop", fill: Theme.brand, action: onStop)
                 } else {
                     iconButton("arrow.up", label: "Send", fill: canSend ? Theme.brand : Theme.borderStrong, action: onSend)
