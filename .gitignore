@@ -13,3 +13,12 @@
 !.claude/hooks/check-gstack.sh
 tools/.phase0-device.json
 .gstack/
+
+# macOS clutter — would otherwise be swept in by `git add -A`
+.DS_Store
+**/.DS_Store
+
+# Xcode/test artefacts
+*.xcresult
+DerivedData/
+OpenClawMobile/Signing.local.xcconfig

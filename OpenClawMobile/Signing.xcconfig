@@ -1,0 +1,13 @@
+// Signing configuration.
+//
+// Device builds need an Apple Development team. Do NOT put a team ID in this file —
+// it is tracked. Put it in Signing.local.xcconfig, which is gitignored:
+//
+//     echo 'DEVELOPMENT_TEAM = ABCDE12345' > OpenClawMobile/Signing.local.xcconfig
+//
+// Simulator builds need nothing here: they sign ad-hoc with no team.
+// NEVER set CODE_SIGNING_ALLOWED = NO. It strips entitlements, the default keychain access
+// group (derived from application-identifier) disappears, every Keychain write fails -34018,
+// and device pairing can never persist. See CLAUDE.md.
+
+#include? "Signing.local.xcconfig"
