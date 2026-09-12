@@ -59,17 +59,18 @@ board, so you can look around before committing to anything.
 # Generate the Xcode project (required after editing project.yml)
 cd OpenClawMobile && xcodegen generate && cd ..
 
-# Run the tests
+# Run the tests. Do NOT add CODE_SIGNING_ALLOWED=NO — it strips the app's entitlements,
+# every Keychain write then fails with -34018, and the device identity is re-minted on
+# every launch so pairing can never persist. CI was green for months with that bug.
 xcodebuild test -project OpenClawMobile/OpenClawMobile.xcodeproj \
   -scheme OpenClawMobile \
-  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
-  CODE_SIGNING_ALLOWED=NO
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 
 # Build and launch in the simulator
 xcodebuild build -project OpenClawMobile/OpenClawMobile.xcodeproj \
   -scheme OpenClawMobile \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
-  CODE_SIGNING_ALLOWED=NO -derivedDataPath /tmp/ocm
+  -derivedDataPath /tmp/ocm
 xcrun simctl install booted /tmp/ocm/Build/Products/Debug-iphonesimulator/OpenClawMobile.app
 xcrun simctl launch booted com.openclaw-gv.mobile
 ```
