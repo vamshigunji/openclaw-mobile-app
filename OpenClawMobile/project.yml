@@ -53,6 +53,19 @@ targets:
         GENERATE_INFOPLIST_FILE: "YES"
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/OpenClawMobile.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/OpenClawMobile"
         BUNDLE_LOADER: "$(TEST_HOST)"
+  OpenClawMobileUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: UITests
+    dependencies:
+      - target: OpenClawMobile
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.openclaw-gv.mobile.uitests
+        GENERATE_INFOPLIST_FILE: "YES"
+        TEST_TARGET_NAME: OpenClawMobile
+
 schemes:
   OpenClawMobile:
     build:
@@ -62,3 +75,14 @@ schemes:
     test:
       targets:
         - OpenClawMobileTests
+
+  # UI tests drive real taps (card drags, filter menu, Stop) that simctl cannot.
+  # Separate scheme: they need a live sandbox gateway, so they must not gate the unit suite.
+  OpenClawMobileUI:
+    build:
+      targets:
+        OpenClawMobile: all
+        OpenClawMobileUITests: [test]
+    test:
+      targets:
+        - OpenClawMobileUITests
