@@ -47,8 +47,13 @@ jobs:
             -scheme OpenClawMobile \
             -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
             -resultBundlePath TestResults.xcresult \
-            CODE_SIGNING_ALLOWED=NO \
             | xcbeautify --renderer github-actions
+        # NOTE: do NOT re-add CODE_SIGNING_ALLOWED=NO. It strips the app's entitlements, and
+        # every Keychain write then fails with -34018 (errSecMissingEntitlement) — because the
+        # DEFAULT keychain access group derives from `application-identifier`, which signing
+        # injects. The app then silently re-mints its device identity on each launch and can
+        # never stay paired. CI passed for months with that bug present because it was testing
+        # a keychain-less build (found live 2026-09-08).
         env:
           NSUnbufferedIO: "YES"
 
