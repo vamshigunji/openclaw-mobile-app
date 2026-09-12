@@ -76,3 +76,110 @@ jobs:
     runs-on: macos-15
     steps:
       - run: echo "Wire up App Store Connect signing + fastlane/altool here."
+
+  live-sandbox:
+    name: Live sandbox (UI + handshake diagnostics)
+    runs-on: macos-15
+    # Separate job on purpose: it needs Docker and a real openclaw gateway, so it must never
+    # gate the unit suite. `continue-on-error` because a runner without Docker, or an upstream
+    # openclaw release changing shape, is an ENVIRONMENT fact — not a regression in this app.
+    # The tests themselves XCTSkip when the gateway is unreachable, so a skipped run is honest.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select latest stable Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Install tools
+        run: brew install xcodegen xcbeautify
+
+      - name: Start Docker (colima — GitHub macOS runners ship no Docker daemon)
+        run: |
+          brew install colima docker
+          colima start --cpu 2 --memory 4 || echo "colima unavailable; UI tests will skip"
+
+      - name: Bring up the openclaw sandbox
+        run: ./sandbox/up.sh || echo "sandbox unavailable; UI tests will skip"
+
+      - name: Generate project
+        working-directory: OpenClawMobile
+        run: xcodegen generate
+
+      - id: sim
+        name: Pick a simulator
+        run: |
+          UDID=$(xcrun simctl list devices available --json \
+            | python3 -c "import json,sys;d=json.load(sys.stdin)['devices'];print([x['udid'] for k,v in d.items() if 'iOS' in k for x in v if 'iPhone' in x['name']][0])")
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+          xcrun simctl boot "$UDID" || true
+
+      # The device must be paired before UI tests can reach the Board. A fresh gateway refuses
+      # the first connect with NOT_PAIRED and prints a requestId; approve it, then run.
+      - name: Pair the simulator with the sandbox
+        run: |
+          set +e
+          xcodebuild build -project OpenClawMobile/OpenClawMobile.xcodeproj -scheme OpenClawMobile \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" -derivedDataPath /tmp/ocm >/dev/null
+          xcrun simctl install "${{ steps.sim.outputs.udid }}" \
+            /tmp/ocm/Build/Products/Debug-iphonesimulator/OpenClawMobile.app
+          SIMCTL_CHILD_SEED_HOST="127.0.0.1:18789" \
+          SIMCTL_CHILD_SEED_TOKEN="$(cat sandbox/.token 2>/dev/null)" \
+            xcrun simctl launch "${{ steps.sim.outputs.udid }}" com.openclaw-gv.mobile --skip-first-run
+          sleep 20
+          # Take the pending requestId from the CLI's TEXT output: `devices list --json`
+          # is {pending, paired} (verified), but the pending item's id key could NOT be verified
+          # (no pending device existed at the time), and guessing a key name is how several
+          # findings in this run went wrong. The text table always prints the request UUID first.
+          REQ=$(docker exec oc openclaw devices list 2>/dev/null \
+            | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1)
+          [ -n "$REQ" ] && docker exec oc openclaw devices approve "$REQ"
+          exit 0
+
+      - name: Live handshake diagnostics
+        run: |
+          set -o pipefail
+          xcodebuild test -project OpenClawMobile/OpenClawMobile.xcodeproj -scheme OpenClawMobileLive \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
+            | xcbeautify --renderer github-actions
+
+      # A fresh sandbox has NO model provider, so agents exist but cannot reply. The chat tests
+      # (duplicate-bubble guard, Stop button) need a real answer and would FAIL for an
+      # environmental reason. Give the gateway a key when one is available, and otherwise run only
+      # the suites that do not need a model.
+      - name: Configure a model provider (only if a key is available)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          # NOT `models auth paste-api-key` — it has no --key flag and prompts for a TTY, so it
+          # would hang here. The config path is non-interactive and its schema was verified:
+          # models.providers.<id>.apiKey exists (openclaw config schema, 2026-09-08).
+          if [ -n "$ANTHROPIC_API_KEY" ]; then
+            docker exec oc openclaw config set models.providers.anthropic.apiKey "$ANTHROPIC_API_KEY" >/dev/null 2>&1 \
+              && docker restart oc >/dev/null 2>&1 \
+              && sleep 25 \
+              && echo "HAS_MODEL=1" >> "$GITHUB_ENV" || echo "key not applied; chat tests will be skipped"
+          else
+            echo "no ANTHROPIC_API_KEY secret; chat tests will be skipped"
+          fi
+
+      - name: UI tests — screens that need no model
+        run: |
+          set -o pipefail
+          xcodebuild test -project OpenClawMobile/OpenClawMobile.xcodeproj -scheme OpenClawMobileUI \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
+            -only-testing:OpenClawMobileUITests/BoardInteractionUITests \
+            -only-testing:OpenClawMobileUITests/SettingsUITests \
+            -only-testing:OpenClawMobileUITests/FirstRunUITests \
+            -only-testing:OpenClawMobileUITests/AgentScreensUITests \
+            | xcbeautify --renderer github-actions
+
+      - name: UI tests — chat (needs a model provider)
+        if: env.HAS_MODEL == '1'
+        run: |
+          set -o pipefail
+          xcodebuild test -project OpenClawMobile/OpenClawMobile.xcodeproj -scheme OpenClawMobileUI \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
+            -only-testing:OpenClawMobileUITests/ChatNoDuplicateReplyUITests \
+            -only-testing:OpenClawMobileUITests/ChatStopUITests \
+            | xcbeautify --renderer github-actions

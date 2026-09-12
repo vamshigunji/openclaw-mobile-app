@@ -76,6 +76,20 @@ schemes:
       targets:
         - OpenClawMobileTests
 
+  # Opt-in scheme that points the LIVE diagnostics at the local sandbox. Kept SEPARATE so the
+  # default `OpenClawMobile` scheme never depends on Docker being up — those tests skip there,
+  # which is correct. Run with: -scheme OpenClawMobileLive
+  OpenClawMobileLive:
+    build:
+      targets:
+        OpenClawMobile: all
+        OpenClawMobileTests: [test]
+    test:
+      environmentVariables:
+        LIVE_HOST: http://127.0.0.1:18789
+      targets:
+        - OpenClawMobileTests
+
   # UI tests drive real taps (card drags, filter menu, Stop) that simctl cannot.
   # Separate scheme: they need a live sandbox gateway, so they must not gate the unit suite.
   OpenClawMobileUI:
