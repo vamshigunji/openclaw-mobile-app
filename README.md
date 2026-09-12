@@ -71,7 +71,7 @@ xcodebuild build -project OpenClawMobile/OpenClawMobile.xcodeproj \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
   CODE_SIGNING_ALLOWED=NO -derivedDataPath /tmp/ocm
 xcrun simctl install booted /tmp/ocm/Build/Products/Debug-iphonesimulator/OpenClawMobile.app
-xcrun simctl launch booted com.openclaw.mobile
+xcrun simctl launch booted com.openclaw-gv.mobile
 ```
 
 Open `OpenClawMobile/OpenClawMobile.xcodeproj` in Xcode and hit Run for the usual workflow.
