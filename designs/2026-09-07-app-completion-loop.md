@@ -1,5 +1,18 @@
 # OpenClaw Mobile — end-to-end completion LOOP PROMPT
 
+> ⚠️ **STALE — DO NOT COPY THE COMMANDS BELOW.** This document's `xcodebuild` lines
+> pass `CODE_SIGNING_ALLOWED=NO`, which is banned (see `CLAUDE.md`): it strips
+> entitlements, every Keychain write fails `-34018`, and pairing cannot persist.
+> Kept for history. Drop the flag before running anything here.
+
+> ## ⚠️ SUPERSEDED 2026-09-08
+>
+> This loop halted at P5.0 for want of a gateway host. A local sandbox now exists
+> (`./sandbox/up.sh`) and P5–P7 are complete. Its CHECK commands also pass
+> **`CODE_SIGNING_ALLOWED=NO`**, which strips entitlements and silently reinstates defect 2
+> (pairing can never persist). Do not re-run this loop; start from
+> `designs/2026-09-08-sandbox-validation-loop.md` and its checklist. Kept as a dated record.
+
 Compiled from `designs/2026-09-07-app-completion-prd.md`. House style follows
 `designs/2026-09-06-dev-suite-loop.md` (the predecessor); nothing here contradicts it.
 

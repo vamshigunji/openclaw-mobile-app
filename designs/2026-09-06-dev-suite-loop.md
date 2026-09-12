@@ -1,5 +1,24 @@
 # Dev Suite — LOOP PROMPT (compiled from `designs/2026-09-06-dev-suite-design.md`; ponytail cuts applied)
 
+> ⚠️ **STALE — DO NOT COPY THE COMMANDS BELOW.** This document's `xcodebuild` lines
+> pass `CODE_SIGNING_ALLOWED=NO`, which is banned (see `CLAUDE.md`): it strips
+> entitlements, every Keychain write fails `-34018`, and pairing cannot persist.
+> Kept for history. Drop the flag before running anything here.
+
+> ## ⚠️ SUPERSEDED 2026-09-08 — do not re-run this loop
+>
+> Two concrete hazards if you do:
+> 1. Its CHECK commands pass **`CODE_SIGNING_ALLOWED=NO`**. That strips the app's entitlements;
+>    every Keychain write then fails `-34018`, the device identity is re-minted on each launch,
+>    and pairing can never persist. It is also why CI was green for months with that bug present.
+>    Never use that flag on this project.
+> 2. It instructs seeding its checklist **verbatim on iteration 0**, which would overwrite a file
+>    that now holds executed results.
+>
+> Current state: `designs/2026-09-08-sandbox-validation-checklist.md` (read its Handoff first).
+> Findings: `designs/2026-09-08-live-validation-findings.md`.
+> Kept unedited below as a dated record of what was believed at the time.
+
 ```
 /ralph-loop "Read designs/2026-09-06-dev-suite-loop.md and keep executing unchecked checklist items; stop only when the completion promise is literally true" --max-iterations 80 --completion-promise "DEV SUITE LOOP COMPLETE"
 ```

@@ -1,5 +1,41 @@
 # CLAUDE.md
 
+Current development status (2026-09-08): PR #10 remains open and `dev-suite-board` is
+still LOCAL-ONLY — `git ls-remote --heads origin dev-suite-board` returns nothing, so 17
+commits plus ~500 uncommitted lines exist on this machine alone. Not a v1 release.
+Remote APNs and TestFlight remain deferred.
+
+**P5–P7 live validation is DONE** (2026-09-08). The old blocker — no reachable gateway —
+is gone: `./sandbox/up.sh` runs openclaw 2026.9.2 in Docker and the Simulator reaches it
+at `http://127.0.0.1:18789` with no tunnel and no Tailscale. Verified live against it:
+pairing, chat, history backfill across an offline gap, all Board reads and writes,
+disconnect/reconnect with auto-resubscribe, approach B (create AND edit), multi-agent
+routing isolation, attachments reaching the model, and two-device fan-in (P7). All seven
+sync probes P1–P7 now have real evidence, not just frame checks.
+
+**Nine defects were found doing it, none of which the 201-test suite could see** (a tenth was claimed and later retracted — see the findings doc) — see
+`designs/2026-09-08-live-validation-findings.md`. Three were actively masked by fixtures
+asserting a protocol the gateway does not speak. Live captures now sit alongside the
+schema-derived Board fixtures (both are kept, for different jobs — see
+`Tests/Fixtures/README.md`).
+
+⚠️ Never build or test with `CODE_SIGNING_ALLOWED=NO`. It strips the app's entitlements,
+every Keychain write then fails with `-34018`, the device identity is re-minted on each
+launch, and pairing can never persist. That flag is why CI was green for months with the
+bug present.
+**The suite now enforces this (verified 2026-09-12).** Controlled run: `DeviceAuthTests`
+is 8/8 green normally and 6/8 RED under the flag, failing `status=-34018` on keychain
+write, accessibility, and identity-reuse. No CI grep is needed — reintroducing the flag
+turns the suite red on its own.
+**Mechanism corrected 2026-09-12** (the ban is unchanged; the reason given here was wrong):
+this is NOT about a missing `keychain-access-groups` entitlement.
+`Sources/OpenClawMobile.entitlements` is an empty `<dict/>` and `KeychainService` sets no
+`kSecAttrAccessGroup` — the app uses the DEFAULT access group, which is derived from the
+`application-identifier` entitlement that the signing step injects. Strip signing and that
+entitlement is absent, so there is no access group to write into. Same outcome, different
+cause; worth stating correctly because the wrong mechanism sends the next reader hunting for
+an entitlement that was never needed.
+
 Guidance for Claude Code when working in this repository.
 
 ## What this is
@@ -58,7 +94,14 @@ Regenerate the Xcode project after editing `project.yml` (requires XcodeGen):
 cd OpenClawMobile && xcodegen generate
 ```
 
-Build for the simulator (no code signing configured — device builds need a team):
+**Device builds work as of 2026-09-11.** `Signing.xcconfig` is tracked and contains only
+`#include? "Signing.local.xcconfig"`; the team ID lives in that gitignored local file, so it never
+reaches the tracked `project.pbxproj` (verified: 0 occurrences). Bundle ID is
+`com.openclaw-gv.mobile` — `com.openclaw.mobile` was unavailable. Build with
+`-destination 'platform=iOS,id=<udid>' -allowProvisioningUpdates`; the device must be registered
+in the developer account and have Developer Mode enabled.
+
+Build for the simulator (signs ad-hoc, needs no team):
 
 ```bash
 xcodebuild -project OpenClawMobile/OpenClawMobile.xcodeproj \
@@ -66,24 +109,29 @@ xcodebuild -project OpenClawMobile/OpenClawMobile.xcodeproj \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build   # or test
 ```
 
-**Tests:** `OpenClawMobileTests` target, ~21 suites (crypto golden vectors, wire-protocol decode from live captures, pairing state machine, mock-gateway E2E, agent roster/activity/create/profile mapping, design-system token enforcement, thread keys, Stop/Retry lifecycle, message segmenting, tool events, attachment intake/budget/send, dictation). CI (`.github/workflows/ci.yml`) runs `xcodegen generate` → `xcodebuild test` on every PR. All pure logic is TDD'd against verbatim live-captured gateway JSON — never hand-invented shapes.
+**Tests:** `OpenClawMobileTests` target, 305 tests across ~32 files, 5 skipped without a live gateway (crypto golden vectors, wire-protocol decode from live captures, pairing state machine, mock-gateway E2E, agent roster/activity/create/profile mapping, design-system token enforcement, thread keys, Stop/Retry lifecycle, message segmenting, tool events, attachment intake/budget/send, dictation). CI (`.github/workflows/ci.yml`) runs `xcodegen generate` → `xcodebuild test` on every PR. All pure logic is TDD'd against verbatim live-captured gateway JSON — never hand-invented shapes.
 
-**QA hooks (DEBUG only):** `--seed-demo` (+ `SEED_HOST`/`SEED_DEVICE_TOKEN`/`SEED_DEVICE_KEY`/`SEED_TEXT` env) seeds a paired identity and auto-sends; `--open-settings` / `--open-create` / `--open-profile <id>` drive screens the simulator can't tap.
+**QA hooks (DEBUG only):** `--seed-demo` (+ `SEED_HOST` / `SEED_TOKEN` / `SEED_DEVICE_TOKEN` / `SEED_DEVICE_KEY` / `SEED_TEXT` env) seeds a paired identity and auto-sends; `--open-settings` / `--open-create` / `--open-board` / `--open-profile <id>` drive screens the simulator can't tap. `SEED_TOKEN` is the SHARED gateway token and `SEED_DEVICE_TOKEN` the pairing-minted device token — they travel in different auth fields, and putting a shared token in the device slot gets `device_token_mismatch`.
 
 ## Architecture rules (from .docs/architecture.md)
 
 - **MVVM with a thin service layer.** Views → view models → services; views never touch network or disk. One `@Observable` view model per screen (iOS 17 Observation framework — no Combine, no `ObservableObject`).
 - **One shared connection.** `AppModel` owns settings + a single `SyncSource` (`GatewayWSSyncSource` → `GatewayConnection` actor: one socket, one handshake, reconnect w/ backoff + auto-resubscribe). Every agent thread and the roster share it — never open a socket per agent/screen.
-- **Multi-agent routing.** Roster from `agents.list`; `ChatThread` (Models) carries the session key + agentId a screen is bound to, with `ChatThread.mainKey(agentId:)` producing the canonical `agent:<id>:main` (a bare key + separate agentId is rejected — LIVE-verified). Every `SyncSource` method is session-keyed, so a non-main session (a task thread) needs no new plumbing. Inbound events carry `agentId`; each thread filters the shared stream via `InboundEnvelope.matchesAgent`.
+- **Multi-agent routing.** Roster from `agents.list`; `ChatThread` (Models) carries the session key + agentId a screen is bound to, with `ChatThread.mainKey(agentId:)` producing the canonical `agent:<id>:main` (the app always sends this canonical form; note 2026.9.2 no longer REJECTS a bare key +
+  separate agentId as it did on 2026-07-22 — the gateway became lenient, but do not rely on it). Every `SyncSource` method is session-keyed, so a non-main session (a task thread) needs no new plumbing. Inbound events carry `agentId`; each thread filters the shared stream via `InboundEnvelope.matchesAgent`.
 - **Admin ops go through the main agent (approach B).** The phone can't call `agents.create/update/delete` (operator.admin). `MainAgentTask.run` sends a structured instruction to `main` via `chat.send`, then polls `agents.list` to confirm. Same pattern for create, edit, delete.
-- **Activity indicator = real signals only.** `AgentActivity.from(event)` maps `session.tool`/`agent`/`chat` events to a verb ("Searching the web"…). Unknown signal → "Working…" fallback; NEVER a fabricated verb. Tool names are claude-cli style (`WebSearch`, `Bash`). Pinned by tests against live JSON.
+- **Activity indicator = real signals only.** `AgentActivity.from(event)` maps `session.tool`/`agent`/`chat` events to a verb ("Searching the web"…). Unknown signal → "Working…" fallback; NEVER a fabricated verb. Tool names: openclaw 2026.9.2 emits its OWN vocabulary — `exec`, `web_search`, `browser`,
+  `read`, `write`, `edit`, `apply_patch`, `ls`, `grep`, `tasks`, `skills`, `memory_*` — NOT the
+  claude-cli names this file used to claim (`Bash`, `WebSearch`). `AgentActivity.forTool` now
+  covers both; an unknown tool still falls back to "Working…", never a fabricated verb.
+  Corrected 2026-09-08 from a live `session.tool` capture (defect 7).
 - **Zero third-party dependencies.** URLSession, Keychain (Security framework), CryptoKit, Network.framework (mock gateway in tests), Foundation only.
-- `async/await` everywhere; errors surface as the typed `GatewayError` enum (`.unauthorized`, `.unreachable`, `.badStatus`, `.pairingPending(requestId:)`, `.bootstrapExpired`).
+- `async/await` everywhere; errors surface as the typed `GatewayError` enum (`.unauthorized`, `.unreachable`, `.badStatus`, `.pairingPending(requestId:)`, `.bootstrapExpired`, `.sessionChanged`). **Several RPCs report failure IN-BAND rather than with `ok:false`** — `tasks.cancel` → `cancelled:false`, `chat.abort` → `aborted:false`, `sessions.patch` → `details.reason:"session-changed"`, `sessions.list` → `hasMore`/`nextOffset` that must be followed. Checking only `ok` reports those refusals to the user as success (defects 8–10, 2026-09-08). Audit any new RPC's real response shape before trusting `ok`.
 - **Optimistic UI:** user messages append immediately; streaming assistant bubble fills from `chat` deltas; the gateway's echo of our own send is deduped by idempotency key; failures mark the bubble failed with retry.
 - **Developer chat surface.** `SyncSource.send` returns the gateway's `runId` and `abort` cancels it (`chat.send` / `chat.abort`, both operator.write) — that pair backs Stop; `runEnds` clears Stop exactly when the run finishes, and a failed bubble offers Retry. `MessageSegmenter` splits a turn into prose and fenced code, `CodeBlockView` renders code with Copy, `ToolTimeline` renders `session.tool` start/result pairs as a per-turn timeline.
-- **Attachments and dictation.** Photo, camera, and file picks go out on native `chat.send` (`Attachments.swift`), sized against the ceilings the gateway advertises in `hello-ok` `policy` (fallback defaults: 20 MB per attachment, 6 MB per image, 25 MB per frame) — check the size before decoding, not after. Dictation is on-device `SFSpeechRecognizer` (`SpeechDictation.swift`). Both need the `Info.plist` usage strings declared in `project.yml`; add new ones there, not in the generated plist.
+- **Attachments and dictation.** Photo, camera, and file picks go out on native `chat.send` (`Attachments.swift`), sized against `AttachmentPolicy` (20 MB per attachment, 6 MB per image, 25 MB per frame) — check the size before decoding, not after. Those are only FALLBACKS: openclaw 2026.9.2 **does** advertise a `policy` block in `hello-ok` (`maxPayload`, `attachments.maxBytes`, `attachments.maxImageBytes`) and it reflects `agents.defaults.mediaMaxMb`. `GatewayConnection` reads it and overrides the defaults, which matters — a gateway set to 7 MB caps attachments the app would otherwise allow at 20 MB. Verified 2026-09-08; the captured handshake is `Tests/Fixtures/hello-ok.json`. Dictation is on-device `SFSpeechRecognizer` (`SpeechDictation.swift`). Both need the `Info.plist` usage strings declared in `project.yml`; add new ones there, not in the generated plist.
 - **Demo mode:** `DemoSyncSource` serves a canned 3-agent roster + `GatewayClient` canned stream when no host is configured, so the app runs and screenshots standalone. Preserve this path.
-- Persistence split: Ed25519 device key + token → Keychain; host/prefs/deviceToken → UserDefaults+Keychain. (Conversation JSON persistence is designed but not yet built — history backfills live from `chat.history`.)
+- Persistence split: Ed25519 device key + token → Keychain; host/prefs/deviceToken → UserDefaults+Keychain. **Conversation persistence now EXISTS** (2026-09-10, `Services/ChatHistoryStore.swift`): one JSON file per session under Application Support, 500 messages kept, written at turn boundaries only — never per streaming delta. `ChatViewModel` renders the cached transcript at init, then merges the live snapshot through the existing `reconcileHistory`. Two things are deliberately NOT persisted: `isStreaming` (a bubble saved mid-run would restore as a permanent typing indicator) and attachment BYTES (`Attachment.data` runs to 20 MB; metadata is kept so the turn still reads as "I sent photo.jpg"). Demo mode never writes. The store is injected with a `nil` default so tests opt in rather than silently writing to the shared app container. Proven live with the gateway stopped.
 
 ## Design system rules
 
